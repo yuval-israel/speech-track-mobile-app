@@ -101,12 +101,20 @@ export function DashboardContainer({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md p-6">
           <p className="text-destructive mb-4">{error || "Failed to load dashboard"}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"
-          >
-            Retry
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"
+            >
+              Retry
+            </button>
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     )
