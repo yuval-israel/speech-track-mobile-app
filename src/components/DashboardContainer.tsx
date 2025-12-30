@@ -17,24 +17,15 @@ interface DashboardContainerProps {
   apiBaseUrl?: string
   authToken?: string
   onLogout: () => void
-  onRequireOnboarding?: () => void
 }
 
 export function DashboardContainer({
   onLogout,
-  onRequireOnboarding,
 }: DashboardContainerProps) {
-  const { data: dashboardData, loading: isLoading, error, refetch, requiresOnboarding } = useDashboardData()
+  const { data: dashboardData, loading: isLoading, error, refetch } = useDashboardData()
   const [currentChildId, setCurrentChildId] = useState<string | null>(null)
 
   const isNoChildError = error && error.toLowerCase().includes("no children")
-
-  useEffect(() => {
-    // If hook specifically says we need onboarding (or if we caught the legacy error)
-    if ((requiresOnboarding || isNoChildError) && onRequireOnboarding) {
-      onRequireOnboarding()
-    }
-  }, [requiresOnboarding, isNoChildError, onRequireOnboarding])
 
   // Handle child switching
   const handleSwitchChild = async (childId: string) => {
@@ -90,36 +81,17 @@ export function DashboardContainer({
     )
   }
 
-  // If we need onboarding, we show nothing (or loading) while the effect redirects
-  if (requiresOnboarding) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        {/* Redirecting to onboarding... */}
-      </div>
-    )
-  }
-
   if (error || !dashboardData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md p-6">
           <p className="text-destructive mb-4">{error || "Failed to load dashboard"}</p>
-          {/* Legacy error fallback just in case */}
-          {isNoChildError && onRequireOnboarding ? (
-            <button
-              onClick={onRequireOnboarding}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              Register Child
-            </button>
-          ) : (
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"
-            >
-              Retry
-            </button>
-          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -139,7 +111,8 @@ export function DashboardContainer({
       onSwitchChild={handleSwitchChild}
       onRecordingUpload={handleRecordingUpload}
       onLogout={onLogout}
-      onAddChild={onRequireOnboarding!}
+      onAddChild={() => alert("Add Child flow coming in next update")}
+      onRefresh={async () => { await refetch() }}
     />
   )
 }

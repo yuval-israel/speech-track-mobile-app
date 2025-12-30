@@ -25,6 +25,7 @@ export interface DashboardViewProps {
   onRecordingUpload: (file: File, duration: number) => Promise<void>
   onLogout: () => void
   onAddChild: () => void
+  onRefresh: () => Promise<void>
 }
 
 export function DashboardView({
@@ -39,10 +40,26 @@ export function DashboardView({
   onRecordingUpload,
   onLogout,
   onAddChild,
+  onRefresh,
 }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("home")
 
   const showRecordingBar = ["home", "family", "records"].includes(activeTab)
+
+  if (!currentChild) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
+        <h2 className="text-xl font-semibold">Welcome to SpeechTrack</h2>
+        <p className="text-muted-foreground mt-2 mb-6">Go to the "My Family" tab to add your first child profile.</p>
+        <div className="w-full max-w-sm">
+          <FamilyView children={children} currentChild={currentChild} onSwitchChild={onSwitchChild} onAddChild={onAddChild} onRefresh={onRefresh} />
+        </div>
+        <div className="fixed bottom-0 left-0 right-0">
+          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24 relative">
@@ -59,7 +76,7 @@ export function DashboardView({
       )}
 
       {activeTab === "family" && (
-        <FamilyView children={children} currentChild={currentChild} onSwitchChild={onSwitchChild} onAddChild={onAddChild} />
+        <FamilyView children={children} currentChild={currentChild} onSwitchChild={onSwitchChild} onAddChild={onAddChild} onRefresh={onRefresh} />
       )}
 
       {activeTab === "records" && (

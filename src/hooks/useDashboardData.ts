@@ -7,12 +7,10 @@ export function useDashboardData() {
     const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [requiresOnboarding, setRequiresOnboarding] = useState(false)
 
     const fetchData = useCallback(async (forcedChildId?: string) => {
         try {
             setLoading(true)
-            setRequiresOnboarding(false)
 
             // 1. Get User
             const user = await apiFetch<UserOut>('/users/me')
@@ -20,8 +18,22 @@ export function useDashboardData() {
             // 2. Get Children
             const children = await apiFetch<ChildOut[]>('/children/')
 
+            // If no children, we still want to show the dashboard (empty state)
             if (children.length === 0) {
-                setRequiresOnboarding(true)
+                const dashboardData: DashboardData = {
+                    user: {
+                        id: user.id.toString(),
+                        email: user.username,
+                        full_name: user.username
+                    },
+                    children: [],
+                    currentChild: null as any, // Handled by DashboardView null check
+                    latestAnalysis: null,
+                    weeklyProgress: [],
+                    missedRecordings: [],
+                    routines: []
+                }
+                setData(dashboardData)
                 setLoading(false)
                 return
             }
@@ -105,5 +117,5 @@ export function useDashboardData() {
         fetchData()
     }, [fetchData])
 
-    return { data, loading, error, refetch: fetchData, requiresOnboarding }
+    return { data, loading, error, refetch: fetchData }
 }

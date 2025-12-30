@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react"
 import { LoginScreen } from "@/components/auth/login-screen"
 import { RegisterScreen } from "@/components/auth/register-screen"
-import { OnboardingWizard } from "@/components/onboarding/wizard"
 import { DashboardContainer } from "@/src/components/DashboardContainer"
 
-type AppState = "loading" | "login" | "register" | "onboarding" | "app"
+type AppState = "loading" | "login" | "register" | "app"
 
 export default function HomePage() {
   const [appState, setAppState] = useState<AppState>("loading")
@@ -20,14 +19,13 @@ export default function HomePage() {
     }
   }, [])
 
-  const handleLoginSuccess = () => setAppState("onboarding")
-  const handleOnboardingComplete = () => setAppState("app")
+  const handleLoginSuccess = () => setAppState("app")
   const handleLogout = () => {
     localStorage.removeItem("access_token")
     setAppState("login")
   }
   const handleRegisterClick = () => setAppState("register")
-  const handleRegisterSuccess = () => setAppState("onboarding")
+  const handleRegisterSuccess = () => setAppState("app")
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,8 +36,7 @@ export default function HomePage() {
       )}
       {appState === "login" && <LoginScreen onSuccess={handleLoginSuccess} onRegisterClick={handleRegisterClick} />}
       {appState === "register" && <RegisterScreen onSuccess={handleRegisterSuccess} onLoginClick={handleLogout} />}
-      {appState === "onboarding" && <OnboardingWizard onComplete={handleOnboardingComplete} onLogout={handleLogout} />}
-      {appState === "app" && <DashboardContainer onLogout={handleLogout} onRequireOnboarding={() => setAppState("onboarding")} />}
+      {appState === "app" && <DashboardContainer onLogout={handleLogout} />}
     </div>
   )
 }
