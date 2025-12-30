@@ -18,7 +18,9 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
     }
 
     // Set Content-Type to application/json by default, unless body is FormData or URLSearchParams
-    if (!(options.body instanceof FormData) && !(options.body instanceof URLSearchParams) && !headers['Content-Type']) {
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type']; // Let browser set multipart/form-data boundary
+    } else if (!(options.body instanceof URLSearchParams) && !headers['Content-Type']) {
         headers['Content-Type'] = 'application/json';
     }
 

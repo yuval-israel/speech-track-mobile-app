@@ -83,7 +83,7 @@ export function HomeView({
         {missedRecordings.map((missed, index) => (
           <MissedRecordingAlert
             key={index}
-            routineName={missed.routine}
+            routine={missed.routine}
             scheduledTime={missed.scheduled_time}
             onRecord={onOpenRecording}
           />
