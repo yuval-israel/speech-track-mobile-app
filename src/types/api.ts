@@ -64,3 +64,11 @@ export interface RecordingUploadPayload {
   child_id: string
   duration: number
 }
+
+export interface Reminder {
+  id: string
+  label: string
+  time: string // HH:mm
+  days: number[] // 0=Sunday, 1=Monday, etc.
+  isEnabled: boolean
+}

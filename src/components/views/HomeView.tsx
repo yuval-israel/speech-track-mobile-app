@@ -4,10 +4,10 @@ import { useState } from "react"
 import type { User, Child, Analysis } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { MetricsCard } from "../MetricsCard"
+import { GaugeChart } from "../GaugeChart"
 import { MissedRecordingAlert } from "../MissedRecordingAlert"
 import { ProfileSettings } from "../ProfileSettings"
-import { Plus } from "lucide-react"
+import { Plus, MessageSquare, Heart } from "lucide-react"
 
 // Recharts imports for the graph
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell } from "recharts"
@@ -90,30 +90,23 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <MetricsCard
-          title="Daily Words"
-          value={analysis?.total_tokens.toString() || "0"}
-          trend="+12%"
-          trendUp={true}
+      <div className="space-y-6">
+        <GaugeChart
+          label="Sentences (MLU)"
+          value={analysis?.mlu || 0}
+          max={5.0}
+          color="#0ea5e9" // Sky 500
+          subtext={analysis?.mlu ? "Your child is on track for their age group." : "No data available yet."}
+          icon={<MessageSquare className="h-5 w-5" />}
         />
-        <MetricsCard
-          title="Avg. MLU"
-          value={analysis?.mlu.toFixed(1) || "0.0"}
-          trend="+0.3"
-          trendUp={true}
-        />
-        <MetricsCard
-          title="Unique Words"
-          value={analysis?.unique_tokens.toString() || "0"}
-          trend="+8"
-          trendUp={true}
-        />
-        <MetricsCard
-          title="Fluency Score"
-          value={analysis?.fluency_score ? analysis.fluency_score.toFixed(1) : "N/A"}
-          trend="Stable"
-          trendUp={true}
+
+        <GaugeChart
+          label="Interaction & Fluency"
+          value={(analysis?.fluency_score || 0) / 10}
+          max={10.0}
+          color="#8b5cf6" // Violet 500
+          subtext="Fluency interaction score based on recent recordings."
+          icon={<Heart className="h-5 w-5" />}
         />
       </div>
 
