@@ -65,11 +65,14 @@ export function RecordingBar({ onUpload }: RecordingBarProps) {
             }
 
             mediaRecorder.onstop = async () => {
-                const mimeType = mediaRecorder.mimeType || 'audio/webm'
-                const blob = new Blob(chunksRef.current, { type: mimeType })
-                // We name it .webm to allow the backend to detect it easily, though the backend relies on pydub detection.
-                // Using a safe fallback name.
-                const file = new File([blob], "recording.webm", { type: mimeType })
+                // Determine the true mime type (likely 'audio/webm;codecs=opus' on Chrome)
+                const mimeType = mediaRecorder.mimeType || 'audio/webm';
+
+                // Create the blob with the correct type
+                const blob = new Blob(chunksRef.current, { type: mimeType });
+
+                // Use a generic extension or .webm. The backend handles the conversion.
+                const file = new File([blob], "recording.webm", { type: mimeType });
 
                 // Auto-save logic
                 setRecordingState("uploading")

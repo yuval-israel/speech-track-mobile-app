@@ -54,7 +54,8 @@ export function useDashboardData() {
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(now)
                 d.setDate(d.getDate() - i)
-                const dateStr = d.toISOString().split('T')[0]
+                // This gives a consistent YYYY-MM-DD in the user's local timezone
+                const dateStr = d.toLocaleDateString('sv-SE');
 
                 // Filter recordings for this day
                 const daysRecordings = recordings.filter(r => r.created_at.startsWith(dateStr))
