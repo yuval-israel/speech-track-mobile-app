@@ -33,6 +33,28 @@ export function DashboardContainer({
     refetch(childId)
   }
 
+  // Refetch data when window gains focus or becomes visible
+  useEffect(() => {
+    const onFocus = () => {
+      refetch(currentChildId || undefined)
+    }
+
+    window.addEventListener("focus", onFocus)
+
+    // Also handle visibility change (e.g. switching tabs on mobile)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        onFocus()
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange)
+
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [refetch, currentChildId])
+
   // Handle recording upload
   const handleRecordingUpload = async (file: File, duration: number) => {
     const childId = currentChildId || dashboardData?.currentChild.id;
@@ -43,13 +65,6 @@ export function DashboardContainer({
     const formData = new FormData()
     formData.append("file", file)
     // Upload endpoint is POST /recordings/?child_id=...
-    // Or body?
-    // Step 5 says: "Connect the upload action to POST /recordings/. Important: This endpoint requires multipart/form-data. Ensure the file field matches the schema, and the child_id query parameter is passed correctly."
-    // Let's check OpenAPI again if child_id is query or body.
-    // OpenAPI for /recordings/ POST says: parameters (none?), Body_upload_recording_recordings__post (file). child_id? 
-    // Wait, let me check the OpenAPI again for /recordings/ POST.
-
-    // Assuming query param as per user prompt "child_id query parameter is passed correctly".
     try {
       await apiFetch(`/recordings/?child_id=${childId}`, {
         method: "POST",

@@ -3,14 +3,18 @@ import { apiFetch } from "@/lib/api/client"
 import { UserOut, ChildOut, ChildGlobalAnalysisOut, adaptAnalysis, Analysis } from "@/lib/api/types"
 import { DashboardData } from "@/src/types/api"
 
+const toISODateString = (date: Date) => date.toISOString().split('T')[0];
+
 export function useDashboardData() {
     const [data, setData] = useState<DashboardData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [partialErrors, setPartialErrors] = useState<Record<string, string>>({})
 
     const fetchData = useCallback(async (forcedChildId?: string) => {
         try {
             setLoading(true)
+            const currentPartialErrors: Record<string, string> = {}
 
             // 1. Get User
             const user = await apiFetch<UserOut>('/users/me')
@@ -34,6 +38,7 @@ export function useDashboardData() {
                     routines: []
                 }
                 setData(dashboardData)
+                setPartialErrors({})
                 setLoading(false)
                 return
             }
@@ -48,6 +53,7 @@ export function useDashboardData() {
                 analysis = adaptAnalysis(globalAnalysis)
             } catch (e) {
                 console.warn("Could not fetch analysis", e)
+                currentPartialErrors.analysis = 'Failed to load analysis'
             }
 
             // 4. Get Recordings History
@@ -56,29 +62,42 @@ export function useDashboardData() {
                 const fetchedRecordings = await apiFetch<any[]>(`/recordings/${currentChildId}`)
                 recordings = fetchedRecordings
             } catch (e) {
-                // Ignore
+                console.warn("Could not fetch recordings", e)
+                // We don't mark this as a partial error necessarily, or maybe we should?
+                // For now, following logic that if recordings fail, we assume empty.
             }
 
             // Calculate weekly progress
             const now = new Date()
             const weeklyProgress = []
+            const todayStr = toISODateString(now)
 
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(now)
                 d.setDate(d.getDate() - i)
-                // This gives a consistent YYYY-MM-DD in the user's local timezone
-                const dateStr = d.toLocaleDateString('sv-SE');
+                const dateStr = toISODateString(d);
 
                 // Filter recordings for this day
+                // Date format from backend might vary, but usually ISO ish.
+                // Assuming fetchedRecordings[].created_at is ISO string.
                 const daysRecordings = recordings.filter(r => r.created_at.startsWith(dateStr))
 
                 // Calculate metrics
                 weeklyProgress.push({
-                    date: d.toLocaleDateString('sv-SE'),
+                    date: dateStr,
                     mlu: 0,
                     tokens: daysRecordings.length
                 })
             }
+
+            // Calculate missed recordings
+            // Check if there is a recording for today
+            const hasRecordedToday = recordings.some(r => r.created_at.startsWith(todayStr))
+            const missedRecordings = !hasRecordedToday ? [{
+                routine: 'Daily Practice',
+                scheduled_time: 'Today'
+            }] : [];
+
 
             const dashboardData: DashboardData = {
                 user: {
@@ -100,11 +119,12 @@ export function useDashboardData() {
                 },
                 latestAnalysis: analysis,
                 weeklyProgress: weeklyProgress,
-                missedRecordings: [], // Mock
+                missedRecordings: missedRecordings,
                 routines: [] // Mock
             }
 
             setData(dashboardData)
+            setPartialErrors(currentPartialErrors)
             setError(null)
             setLoading(false)
         } catch (err) {
@@ -117,5 +137,5 @@ export function useDashboardData() {
         fetchData()
     }, [fetchData])
 
-    return { data, loading, error, refetch: fetchData }
+    return { data, loading, error, partialErrors, refetch: fetchData }
 }
