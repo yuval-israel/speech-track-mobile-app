@@ -10,6 +10,7 @@ import type { DashboardData, RecordingUploadPayload, Child } from "../types/api"
 // ...
 import { useDashboardData } from "../hooks/useDashboardData"
 import { apiFetch } from "@/lib/api/client"
+import { toast } from "sonner"
 
 interface DashboardContainerProps {
   // Configs mostly ignored now as apiFetch handles env
@@ -23,16 +24,17 @@ export function DashboardContainer({
   onLogout,
   onRequireOnboarding,
 }: DashboardContainerProps) {
-  const { data: dashboardData, loading: isLoading, error, refetch } = useDashboardData()
+  const { data: dashboardData, loading: isLoading, error, refetch, requiresOnboarding } = useDashboardData()
   const [currentChildId, setCurrentChildId] = useState<string | null>(null)
 
   const isNoChildError = error && error.toLowerCase().includes("no children")
 
   useEffect(() => {
-    if (isNoChildError && onRequireOnboarding) {
+    // If hook specifically says we need onboarding (or if we caught the legacy error)
+    if ((requiresOnboarding || isNoChildError) && onRequireOnboarding) {
       onRequireOnboarding()
     }
-  }, [isNoChildError, onRequireOnboarding])
+  }, [requiresOnboarding, isNoChildError, onRequireOnboarding])
 
   // Handle child switching
   const handleSwitchChild = async (childId: string) => {
@@ -57,13 +59,19 @@ export function DashboardContainer({
     // Wait, let me check the OpenAPI again for /recordings/ POST.
 
     // Assuming query param as per user prompt "child_id query parameter is passed correctly".
-    await apiFetch(`/recordings/?child_id=${childId}`, {
-      method: "POST",
-      body: formData,
-    })
+    try {
+      await apiFetch(`/recordings/?child_id=${childId}`, {
+        method: "POST",
+        body: formData,
+      })
 
-    // Refetch dashboard data after successful upload
-    refetch(childId)
+      // Refetch dashboard data after successful upload
+      await refetch(childId)
+      toast.success("Recording saved successfully!")
+    } catch (e) {
+      console.error("Upload failed", e)
+      toast.error("Failed to save recording")
+    }
   }
 
   if (isLoading) {
@@ -77,13 +85,21 @@ export function DashboardContainer({
     )
   }
 
-
+  // If we need onboarding, we show nothing (or loading) while the effect redirects
+  if (requiresOnboarding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        {/* Redirecting to onboarding... */}
+      </div>
+    )
+  }
 
   if (error || !dashboardData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md p-6">
           <p className="text-destructive mb-4">{error || "Failed to load dashboard"}</p>
+          {/* Legacy error fallback just in case */}
           {isNoChildError && onRequireOnboarding ? (
             <button
               onClick={onRequireOnboarding}

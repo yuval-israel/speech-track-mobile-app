@@ -16,6 +16,7 @@ export interface Child {
 }
 
 export interface POSDistribution {
+  [key: string]: number
   nouns: number
   verbs: number
   adjectives: number
