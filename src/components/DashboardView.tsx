@@ -46,32 +46,20 @@ export function DashboardView({
 
   const showRecordingBar = ["home", "family", "records"].includes(activeTab)
 
-  if (!currentChild) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
-        <h2 className="text-xl font-semibold">Welcome to SpeechTrack</h2>
-        <p className="text-muted-foreground mt-2 mb-6">Go to the "My Family" tab to add your first child profile.</p>
-        <div className="w-full max-w-sm">
-          <FamilyView children={children} currentChild={currentChild} onSwitchChild={onSwitchChild} onAddChild={onAddChild} onRefresh={onRefresh} />
-        </div>
-        <div className="fixed bottom-0 left-0 right-0">
-          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-background pb-24 relative">
       {activeTab === "home" && (
         <HomeView
           user={user}
-          currentChild={currentChild}
+          currentChild={currentChild || null}
           analysis={analysis}
           weeklyProgress={weeklyProgress}
           missedRecordings={missedRecordings}
           onOpenRecording={() => { }}
           onLogout={onLogout}
+          onNavigateToFamily={() => setActiveTab("family")}
         />
       )}
 

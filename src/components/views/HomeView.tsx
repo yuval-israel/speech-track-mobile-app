@@ -14,12 +14,13 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianG
 
 interface HomeViewProps {
   user: User
-  currentChild: Child
+  currentChild: Child | null
   analysis: Analysis | null
   weeklyProgress: Array<{ date: string; mlu: number; tokens: number }>
   missedRecordings: Array<{ routine: string; scheduled_time: string }>
   onOpenRecording: () => void
   onLogout: () => void
+  onNavigateToFamily?: () => void
 }
 
 export function HomeView({
@@ -30,7 +31,34 @@ export function HomeView({
   missedRecordings,
   onOpenRecording,
   onLogout,
+  onNavigateToFamily
 }: HomeViewProps) {
+
+  // Empty State
+  if (!currentChild) {
+    return (
+      <div className="p-4 space-y-6 pb-24 flex flex-col h-[80vh] items-center justify-center text-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mb-2">
+            Welcome to SpeechTrack, {user.full_name?.split(" ")[0]}!
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
+            Get started by creating a profile for your child to track their speech development.
+          </p>
+          <div className="flex justify-center">
+            <Button
+              onClick={onNavigateToFamily}
+              size="lg"
+              className="rounded-full shadow-lg"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create Child Profile
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Prepare data for POS chart
   const posData = analysis?.pos_distribution
