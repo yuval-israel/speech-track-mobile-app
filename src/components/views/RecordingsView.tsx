@@ -82,9 +82,9 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-1">No recordings yet</h3>
                 <p className="text-sm text-slate-500">
-                    Start recording to track {currentChild.name}'s speech progress.
+                    Start recording to track {currentChild?.name || 'your child'}'s speech progress.
                 </p>
-            </div>
+            </div >
         )
     }
 

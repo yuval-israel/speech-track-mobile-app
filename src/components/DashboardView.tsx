@@ -71,10 +71,10 @@ export function DashboardView({
         <RecordingsView currentChild={currentChild} />
       )}
 
-      {activeTab === "alerts" && <AlertsView routines={routines} />}
+      {activeTab === "alerts" && <AlertsView />}
 
       {activeTab === "settings" && (
-        <SettingsView user={user} onLogout={onLogout} />
+        <SettingsView user={user} currentChild={currentChild} onLogout={onLogout} onRefresh={onRefresh} />
       )}
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

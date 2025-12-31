@@ -28,7 +28,8 @@ export function useDashboardData() {
                     user: {
                         id: user.id.toString(),
                         email: user.username,
-                        full_name: user.username
+                        full_name: user.username,
+                        has_voice_profile: user.has_voice_profile
                     },
                     children: [],
                     currentChild: null as any, // Handled by DashboardView null check

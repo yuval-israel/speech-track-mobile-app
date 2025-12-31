@@ -7,11 +7,13 @@ export interface UserOut {
   id: number;
   username: string;
   created_at: string;
+  has_voice_profile: boolean;
 }
 
 export interface Gender {
   enum: "male" | "female";
 }
+// ... (skipping unchanged parts)
 
 export interface ChildOut {
   id: number;
@@ -121,6 +123,7 @@ export interface User {
   email: string;
   full_name: string;
   profile_image_url?: string;
+  has_voice_profile: boolean;
 }
 
 export interface Child {
@@ -150,7 +153,8 @@ export function adaptUser(userOut: UserOut): User {
     id: userOut.id.toString(),
     email: userOut.username, // Fallback
     full_name: userOut.username,
-    profile_image_url: undefined
+    profile_image_url: undefined,
+    has_voice_profile: userOut.has_voice_profile
   };
 }
 
@@ -205,4 +209,12 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     vocabulary_diversity: 0, // Mock
     // id, child_id etc are missing from AnalysisOut, added as optional in interface
   };
+}
+// ... (existing code)
+export interface ChildShareOut {
+  user_id: number;
+  username: string;
+  role: "owner" | "editor" | "spectator";
+  status: "invited" | "accepted" | "revoked";
+  invited_by_id: number | null;
 }

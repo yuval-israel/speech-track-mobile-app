@@ -1,4 +1,4 @@
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 type RequestOptions = RequestInit & {
     headers?: Record<string, string>;
@@ -6,6 +6,7 @@ type RequestOptions = RequestInit & {
 
 export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const url = `${apiBaseUrl}${endpoint}`;
+    console.log(`[API Request] Fetching: ${url}`);
 
     const headers: Record<string, string> = {
         ...options.headers,

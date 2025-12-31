@@ -46,8 +46,8 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
             </Card >
           ))}
 
-          {/* Add Parent Card */}
-          <AddMemberCard type="parent" onRefresh={onRefresh} />
+          {/* Add Parent Card - Disabled for now */}
+          {/* <AddMemberCard type="parent" onRefresh={onRefresh} /> */}
         </div >
       </section >
 
