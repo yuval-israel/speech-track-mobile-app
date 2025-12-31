@@ -119,7 +119,7 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role: newRole }) // Backend checks for 'role'
             })
-            toast.success("Role updated")
+            toast.success("Role updated successfully.")
             fetchShares()
         } catch (error) {
             console.error(error)
@@ -255,49 +255,51 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                     <CardHeader>
                         <CardTitle className="flex justify-between items-center">
                             <span>Family Members</span>
-                            <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline">
-                                        <Plus className="w-4 h-4 mr-1" /> Invite Parent
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Invite Parent</DialogTitle>
-                                        <DialogDescription>
-                                            Share access to <strong>{currentChild.name}</strong>'s profile with your spouse or partner.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="username">Username</Label>
-                                            <Input
-                                                id="username"
-                                                placeholder="Enter their email (username)..."
-                                                value={inviteUsername}
-                                                onChange={(e) => setInviteUsername(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="role">Role</Label>
-                                            <select
-                                                id="role"
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                value={inviteRole}
-                                                onChange={(e) => setInviteRole(e.target.value as "viewer" | "parent")}
-                                            >
-                                                <option value="viewer">Viewer (Read Only)</option>
-                                                <option value="parent">Parent (Can Record & Edit)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button onClick={handleInvite} disabled={isInviting || !inviteUsername}>
-                                            {isInviting ? "Sending..." : "Send Invite"}
+                            {currentChild.current_user_role !== 'spectator' && (
+                                <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm" variant="outline">
+                                            <Plus className="w-4 h-4 mr-1" /> Invite Parent
                                         </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Invite Parent</DialogTitle>
+                                            <DialogDescription>
+                                                Share access to <strong>{currentChild.name}</strong>'s profile with your spouse or partner.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="username">Username</Label>
+                                                <Input
+                                                    id="username"
+                                                    placeholder="Enter their email (username)..."
+                                                    value={inviteUsername}
+                                                    onChange={(e) => setInviteUsername(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="role">Role</Label>
+                                                <select
+                                                    id="role"
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    value={inviteRole}
+                                                    onChange={(e) => setInviteRole(e.target.value as "viewer" | "parent")}
+                                                >
+                                                    <option value="viewer">Viewer (Read Only)</option>
+                                                    <option value="parent">Parent (Can Record & Edit)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button onClick={handleInvite} disabled={isInviting || !inviteUsername}>
+                                                {isInviting ? "Sending..." : "Send Invite"}
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
                         </CardTitle>
                         <CardDescription>
                             People with access to {currentChild.name}

@@ -12,6 +12,7 @@ export interface Child {
   name: string
   birthdate: string // ISO format: YYYY-MM-DD
   gender: string
+  current_user_role?: 'owner' | 'editor' | 'spectator'
   profile_image_url?: string
 }
 
