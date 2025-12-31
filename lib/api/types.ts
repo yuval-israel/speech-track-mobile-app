@@ -19,6 +19,7 @@ export interface ChildOut {
   birthdate: string;
   gender: "male" | "female";
   created_at: string;
+  member_type?: "parent" | "child";
 }
 
 export interface VoiceStamp {

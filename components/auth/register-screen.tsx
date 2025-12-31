@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
-import { VoiceStampFlow } from "@/components/voice-stamp-flow"
+// VoiceStampFlow import removed as it is no longer needed here
 
 interface RegisterScreenProps {
     onSuccess: () => void
@@ -15,7 +15,7 @@ interface RegisterScreenProps {
 }
 
 export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps) {
-    const [step, setStep] = useState<"register" | "voice">("register")
+    // Removed "step" state since we don't need to switch screens anymore
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -47,7 +47,7 @@ export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps)
 
         setIsLoading(true)
         try {
-            // Register
+            // 1. Register User
             await apiFetch('/users/', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -58,7 +58,7 @@ export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps)
 
             toast.success("Account created successfully! Logging in...");
 
-            // Auto login
+            // 2. Auto Login to get Token
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
@@ -69,19 +69,16 @@ export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps)
             });
 
             localStorage.setItem('access_token', data.access_token);
-            setStep("voice")
+
+            // 3. Immediately go to Dashboard (Skipping Voice Setup)
+            onSuccess()
+
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to create account");
         } finally {
             setIsLoading(false);
         }
-    }
-
-    if (step === "voice") {
-        return (
-            <VoiceStampFlow isParent={true} onComplete={onSuccess} />
-        )
     }
 
     return (

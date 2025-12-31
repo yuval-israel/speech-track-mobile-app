@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import type { Child } from "../../types/api"
-import { Check, Plus, Mic, Save, Loader2, StopCircle, RefreshCw, Square } from "lucide-react"
+import { Check, Mic, Save, Loader2, Square } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -19,10 +19,12 @@ interface FamilyViewProps {
 }
 
 export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, onRefresh }: FamilyViewProps) {
-  // Mock parent data (since we don't have a list of parents from props yet)
-  const parents = [
-    { id: "parent-1", name: "You", isCurrentUser: true }
-  ]
+  // Separate children based on member_type
+  const parentsList = children.filter(c => c.member_type === 'parent')
+  const childrenList = children.filter(c => c.member_type !== 'parent')
+
+  // Mock parent data for the current user (Admin/You)
+  const currentUser = { id: "current-user", name: "You", isCurrentUser: true }
 
   return (
     <div className="min-h-screen pb-24 p-6 space-y-8">
@@ -31,8 +33,23 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
       <section>
         <h2 className="text-xl font-bold mb-4">Parents</h2>
         <div className="space-y-3">
-          {parents.map((parent) => (
-            <Card key={parent.id} className="border-border">
+          {/* Current User Card */}
+          <Card key={currentUser.id} className="border-border">
+            <CardContent className="p-4 flex items-center gap-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} />
+                <AvatarFallback>{currentUser.name[0]}</AvatarFallback>
+              </Avatar >
+              <div className="flex-1">
+                <p className="font-medium">{currentUser.name}</p>
+                <p className="text-sm text-muted-foreground">Admin</p>
+              </div>
+            </CardContent >
+          </Card >
+
+          {/* Other Parents */}
+          {parentsList.map((parent) => (
+            <Card key={parent.id} className="border-border opacity-70">
               <CardContent className="p-4 flex items-center gap-4">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.name}`} />
@@ -40,7 +57,7 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
                 </Avatar >
                 <div className="flex-1">
                   <p className="font-medium">{parent.name}</p>
-                  {parent.isCurrentUser && <p className="text-sm text-muted-foreground">Admin</p>}
+                  <p className="text-sm text-muted-foreground">Parent</p>
                 </div>
               </CardContent >
             </Card >
@@ -55,7 +72,7 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
       < section >
         <h2 className="text-xl font-bold mb-4">Children</h2>
         <div className="space-y-3">
-          {children.map((child) => {
+          {childrenList.map((child) => {
             const isActive = child.id === currentChild?.id
             return (
               <Card
@@ -151,11 +168,12 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
     setIsSaving(true)
     try {
       // Step 1: Create Profile (JSON)
-      const finalName = type === "parent" ? `${name} (Parent)` : name
+      // Send member_type in payload
       const payload = {
-        name: finalName,
+        name: name,
         birthdate: new Date().toISOString().split('T')[0],
-        gender: "male"
+        gender: "male",
+        member_type: type
       }
 
       const childResponse = await apiFetch<Child>('/children/', {
@@ -175,7 +193,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
           method: 'POST',
           body: formData
         })
-        toast.success("Profile created successfully!")
+        toast.success(`${type === 'parent' ? 'Parent' : 'Child'} profile created successfully!`)
       } catch (uploadError) {
         console.error("Audio upload failed", uploadError)
         toast.warning("Profile created, but audio upload failed.")
