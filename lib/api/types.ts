@@ -21,6 +21,7 @@ export interface ChildOut {
   birthdate: string;
   gender: "male" | "female";
   created_at: string;
+  current_user_role?: "owner" | "editor" | "spectator";
 }
 
 export interface VoiceStamp {
@@ -132,6 +133,7 @@ export interface Child {
   birthdate: string;
   gender: string;
   profile_image_url?: string;
+  current_user_role?: "owner" | "editor" | "spectator";
 }
 
 export interface Analysis {
@@ -164,7 +166,8 @@ export function adaptChild(childOut: ChildOut): Child {
     name: childOut.name,
     birthdate: childOut.birthdate,
     gender: childOut.gender,
-    profile_image_url: undefined
+    profile_image_url: undefined,
+    current_user_role: childOut.current_user_role
   };
 }
 
@@ -217,4 +220,11 @@ export interface ChildShareOut {
   role: "owner" | "editor" | "spectator";
   status: "invited" | "accepted" | "revoked";
   invited_by_id: number | null;
+}
+
+export interface ChildShareInviteOut {
+  child_id: number;
+  child_name: string;
+  role: "owner" | "editor" | "spectator";
+  invited_by: string | null;
 }

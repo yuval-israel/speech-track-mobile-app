@@ -44,7 +44,7 @@ export function DashboardView({
 }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("home")
 
-  const showRecordingBar = ["home", "family", "records"].includes(activeTab)
+  const showRecordingBar = ["home", "family", "records"].includes(activeTab) && currentChild?.current_user_role !== "spectator"
 
 
 

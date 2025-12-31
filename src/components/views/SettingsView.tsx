@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import type { User, Child, ChildShareOut } from "@/lib/api/types"
+import type { User, Child, ChildShareOut, ChildShareInviteOut } from "@/lib/api/types"
 import { ParentVoiceRecorder } from "@/components/ParentVoiceRecorder"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
@@ -28,7 +28,47 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
     const [shares, setShares] = useState<ChildShareOut[]>([])
     const [isInviteOpen, setIsInviteOpen] = useState(false)
     const [inviteUsername, setInviteUsername] = useState("")
+    const [inviteRole, setInviteRole] = useState<"viewer" | "parent">("viewer")
     const [isInviting, setIsInviting] = useState(false)
+
+    // Pending Invitations State
+    const [invitations, setInvitations] = useState<ChildShareInviteOut[]>([])
+
+    useEffect(() => {
+        fetchInvitations()
+    }, [])
+
+    const fetchInvitations = async () => {
+        try {
+            const data = await apiFetch<ChildShareInviteOut[]>('/children/share/invitations')
+            setInvitations(data)
+        } catch (error) {
+            console.error("Failed to fetch invitations:", error)
+        }
+    }
+
+    const handleAcceptInvite = async (childId: number) => {
+        try {
+            await apiFetch(`/children/${childId}/share/accept`, { method: 'POST' })
+            toast.success("Invitation accepted")
+            fetchInvitations()
+            await onRefresh() // Refresh global state to show new child
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to accept invitation")
+        }
+    }
+
+    const handleDeclineInvite = async (childId: number) => {
+        try {
+            await apiFetch(`/children/${childId}/share/me`, { method: 'DELETE' })
+            toast.success("Invitation declined")
+            fetchInvitations()
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to decline invitation")
+        }
+    }
 
     useEffect(() => {
         if (currentChild) {
@@ -51,15 +91,16 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
 
         setIsInviting(true)
         try {
-            await apiFetch(`/children/${currentChild.id}/share`, {
+            await apiFetch(`/children/${currentChild.id}/invite`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    username: inviteUsername,
-                    role: 'editor' // Default role
+                    email: inviteUsername,
+                    role: inviteRole
                 })
             })
             toast.success(`Invitation sent to ${inviteUsername}`)
             setInviteUsername("")
+            setInviteRole("viewer") // Reset to default
             setIsInviteOpen(false)
             fetchShares()
         } catch (error) {
@@ -67,6 +108,22 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
             toast.error("Failed to send invitation. Check username.")
         } finally {
             setIsInviting(false)
+        }
+    }
+
+    const handleUpdateRole = async (username: string, newRole: "editor" | "spectator") => {
+        if (!currentChild) return
+        try {
+            await apiFetch(`/children/${currentChild.id}/share/${username}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole }) // Backend checks for 'role'
+            })
+            toast.success("Role updated")
+            fetchShares()
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to update role")
         }
     }
 
@@ -112,6 +169,38 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Pending Invitations Section */}
+            {invitations.length > 0 && (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                    <CardHeader>
+                        <CardTitle className="text-blue-700 dark:text-blue-300">Pending Invitations</CardTitle>
+                        <CardDescription>
+                            You have been invited to view these profiles.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {invitations.map((invite) => (
+                            <div key={invite.child_id} className="flex items-center justify-between p-3 bg-white dark:bg-background rounded-lg border shadow-sm">
+                                <div>
+                                    <div className="font-medium">{invite.child_name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Invited by {invite.invited_by} • {invite.role}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => handleDeclineInvite(invite.child_id)}>
+                                        Decline
+                                    </Button>
+                                    <Button size="sm" onClick={() => handleAcceptInvite(invite.child_id)}>
+                                        Accept
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Voice Profile Section */}
             <Card>
@@ -168,10 +257,9 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                             <span>Family Members</span>
                             <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
                                 <DialogTrigger asChild>
-                                    {/* <Button size="sm" variant="outline">
+                                    <Button size="sm" variant="outline">
                                         <Plus className="w-4 h-4 mr-1" /> Invite Parent
-                                    </Button> */}
-                                    <div className="text-sm text-muted-foreground">Family sharing coming soon</div>
+                                    </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -185,10 +273,22 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                             <Label htmlFor="username">Username</Label>
                                             <Input
                                                 id="username"
-                                                placeholder="Enter their username..."
+                                                placeholder="Enter their email (username)..."
                                                 value={inviteUsername}
                                                 onChange={(e) => setInviteUsername(e.target.value)}
                                             />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="role">Role</Label>
+                                            <select
+                                                id="role"
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={inviteRole}
+                                                onChange={(e) => setInviteRole(e.target.value as "viewer" | "parent")}
+                                            >
+                                                <option value="viewer">Viewer (Read Only)</option>
+                                                <option value="parent">Parent (Can Record & Edit)</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -228,12 +328,29 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                         <div className="text-sm font-medium">
                                             {share.username} {share.username === user.email ? "(You)" : ""}
                                         </div>
-                                        <div className="text-xs text-muted-foreground capitalize">
-                                            {share.role} • {share.status}
+                                        <div className="text-xs text-muted-foreground capitalize flex items-center gap-2">
+                                            <span>{share.status}</span>
                                         </div>
                                     </div>
-                                    {/* Only show delete if not self and if owner (implied by access to this list usually) - simplistic for now */}
-                                    {share.username !== user.email && share.role !== 'owner' && (
+
+                                    {/* Role Management Dropdown for Owner */}
+                                    {currentChild.current_user_role === 'owner' && share.role !== 'owner' ? (
+                                        <select
+                                            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                            value={share.role === 'editor' ? 'parent' : 'viewer'}
+                                            onChange={(e) => handleUpdateRole(share.username, e.target.value === 'parent' ? 'editor' : 'spectator')}
+                                        >
+                                            <option value="viewer">Viewer</option>
+                                            <option value="parent">Parent</option>
+                                        </select>
+                                    ) : (
+                                        <div className="text-xs text-muted-foreground capitalize mr-2">
+                                            {share.role === 'editor' ? 'Parent' : share.role === 'spectator' ? 'Viewer' : 'Owner'}
+                                        </div>
+                                    )}
+
+                                    {/* Only show delete if not self and if owner */}
+                                    {share.username !== user.email && share.role !== 'owner' && currentChild.current_user_role === 'owner' && (
                                         <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -243,7 +360,8 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                         )}
                     </CardContent>
                 </Card>
-            )}
+            )
+            }
 
             {/* Appearance Section */}
             <Card>
@@ -290,6 +408,6 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
             <div className="text-center text-xs text-muted-foreground pt-8">
                 <p>SpeechTrack v0.1.0</p>
             </div>
-        </div>
+        </div >
     )
 }
