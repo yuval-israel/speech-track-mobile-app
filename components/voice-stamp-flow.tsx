@@ -1,24 +1,121 @@
 "use client"
 
-import { useState } from "react"
-import { Mic, ChevronRight } from "lucide-react"
+import { useState, useRef } from "react"
+import { Mic, ChevronRight, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { apiFetch } from "@/lib/api/client"
+import { toast } from "sonner"
 
-export function VoiceStampFlow() {
+interface VoiceStampFlowProps {
+  isParent?: boolean
+  onComplete?: () => void
+}
+
+export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
   const [step, setStep] = useState(1)
   const [isRecording, setIsRecording] = useState(false)
   const [childName, setChildName] = useState("")
   const [dob, setDob] = useState("")
   const [gender, setGender] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data)
+        }
+      }
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/wav' })
+        setAudioBlob(blob)
+        const tracks = stream.getTracks()
+        tracks.forEach(track => track.stop())
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Error accessing microphone:", err)
+      toast.error("Could not access microphone")
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
   }
 
   const toggleRecording = () => {
-    setIsRecording(!isRecording)
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }
+
+  const handleNext = async () => {
+    if (step === 1) {
+      // Logic for Parent Voice Step
+      if (!audioBlob) {
+        toast.error("Please record your voice first")
+        return
+      }
+
+      // If isParent is true, we upload immediately linked to the user
+      // If NOT isParent, we might just be storing it for later? Or maybe we don't support non-parent flow in step 1 yet?
+      // The prompt says "If isParent={true}: Send to POST /voice-stamps/ without a child_id."
+
+      if (isParent) {
+        setIsUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append("file", audioBlob, "parent_voice.wav")
+          formData.append("speaker_name", "Parent")
+          // No child_id for parent
+
+          await apiFetch("/voice-stamps/", {
+            method: "POST",
+            body: formData,
+          })
+
+          toast.success("Voice stamp saved!")
+          // Prepare for next step or finish?
+          // If this is registration, we proceed to child setup
+          setStep(step + 1)
+          setAudioBlob(null) // Reset for next recording
+        } catch (error) {
+          console.error(error)
+          toast.error("Failed to upload voice stamp")
+        } finally {
+          setIsUploading(false)
+        }
+        return
+      }
+    }
+
+    // Default transition for other cases
+    if (step < 3) {
+      setStep(step + 1)
+      setAudioBlob(null)
+    } else {
+      // Step 3 Completion
+      if (onComplete) onComplete()
+    }
   }
 
   return (
@@ -66,9 +163,8 @@ export function VoiceStampFlow() {
             {/* Recording Button */}
             <Button
               onClick={toggleRecording}
-              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
-                isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
+              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
             >
               <Mic className="w-5 h-5 mr-2" />
               {isRecording ? "Stop Recording" : "Start Recording"}
@@ -76,10 +172,15 @@ export function VoiceStampFlow() {
 
             <Button
               onClick={handleNext}
+              disabled={isUploading || (!audioBlob && !isRecording)}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-full font-semibold py-4"
             >
-              Continue
-              <ChevronRight className="w-5 h-5 ml-2" />
+              {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                <>
+                  Continue
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -125,9 +226,8 @@ export function VoiceStampFlow() {
                       key={g}
                       variant={gender === g ? "default" : "outline"}
                       onClick={() => setGender(g)}
-                      className={`flex-1 rounded-xl ${
-                        gender === g ? "bg-blue-600 hover:bg-blue-700 text-white" : "border-slate-300 text-slate-900"
-                      }`}
+                      className={`flex-1 rounded-xl ${gender === g ? "bg-blue-600 hover:bg-blue-700 text-white" : "border-slate-300 text-slate-900"
+                        }`}
                     >
                       {g}
                     </Button>
@@ -159,7 +259,7 @@ export function VoiceStampFlow() {
                 Back
               </Button>
               <Button
-                onClick={handleNext}
+                onClick={() => setStep(step + 1)}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold"
               >
                 Continue
@@ -195,9 +295,8 @@ export function VoiceStampFlow() {
             {/* Recording Button - Playful Teal */}
             <Button
               onClick={toggleRecording}
-              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
-                isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}
+              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-teal-600 hover:bg-teal-700 text-white"
+                }`}
             >
               <Mic className="w-5 h-5 mr-2" />
               {isRecording ? "Stop Recording" : "Start Recording"}
@@ -213,10 +312,8 @@ export function VoiceStampFlow() {
                 Back
               </Button>
               <Button
-                onClick={() => {
-                  // Handle completion
-                  alert("Voice Stamp setup complete!")
-                }}
+                onClick={handleNext}
+                disabled={onComplete && !audioBlob} // Basic validation
                 className="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-full font-semibold"
               >
                 Finish Setup

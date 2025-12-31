@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
+import { VoiceStampFlow } from "@/components/voice-stamp-flow"
 
 interface RegisterScreenProps {
     onSuccess: () => void
@@ -14,6 +15,7 @@ interface RegisterScreenProps {
 }
 
 export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps) {
+    const [step, setStep] = useState<"register" | "voice">("register")
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -67,13 +69,19 @@ export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps)
             });
 
             localStorage.setItem('access_token', data.access_token);
-            onSuccess();
+            setStep("voice")
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to create account");
         } finally {
             setIsLoading(false);
         }
+    }
+
+    if (step === "voice") {
+        return (
+            <VoiceStampFlow isParent={true} onComplete={onSuccess} />
+        )
     }
 
     return (
