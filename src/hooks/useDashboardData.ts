@@ -110,7 +110,6 @@ export function useDashboardData() {
                     name: c.name,
                     birthdate: c.birthdate,
                     gender: c.gender,
-                    member_type: c.member_type,
                 })),
                 currentChild: {
                     id: currentChild.id.toString(),

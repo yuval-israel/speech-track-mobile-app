@@ -13,7 +13,6 @@ export interface Child {
   birthdate: string // ISO format: YYYY-MM-DD
   gender: string
   profile_image_url?: string
-  member_type?: "child" | "parent"
 }
 
 export interface POSDistribution {
