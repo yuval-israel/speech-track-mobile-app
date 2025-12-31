@@ -104,19 +104,22 @@ export function useDashboardData() {
                 user: {
                     id: user.id.toString(),
                     email: user.username,
-                    full_name: user.username
+                    full_name: user.username,
+                    has_voice_profile: user.has_voice_profile
                 },
                 children: children.map(c => ({
                     id: c.id.toString(),
                     name: c.name,
                     birthdate: c.birthdate,
                     gender: c.gender,
+                    current_user_role: c.current_user_role,
                 })),
                 currentChild: {
                     id: currentChild.id.toString(),
                     name: currentChild.name,
                     birthdate: currentChild.birthdate,
                     gender: currentChild.gender,
+                    current_user_role: currentChild.current_user_role,
                 },
                 latestAnalysis: analysis,
                 weeklyProgress: weeklyProgress,

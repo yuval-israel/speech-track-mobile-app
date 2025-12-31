@@ -5,6 +5,7 @@ export interface User {
   email: string
   full_name: string
   profile_image_url?: string
+  has_voice_profile: boolean
 }
 
 export interface Child {
