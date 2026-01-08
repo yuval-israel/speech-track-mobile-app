@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "sonner"
 import { Play, Download, Trash2, FileAudio, Calendar, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -22,34 +23,42 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
         setPlayingId(playingId === id ? null : id)
     }
 
-    const handleDownload = (id: number, filename: string) => {
-        // Construct download URL using the backend endpoint
-        // GET /recordings/by-id/{recording_id}/file
-        // Using window.open or creating a link element
-        const token = localStorage.getItem("token")
-        if (!token) return
+    const handleDownload = async (id: number, filename: string) => {
+        const token = localStorage.getItem("access_token")
+        if (!token) {
+            toast.error("You must be logged in to download recordings.")
+            return
+        }
 
-        // We can't easily add headers to a direct link download without using fetch/blob workflow.
-        // However, if the endpoint requires auth, we need to fetch it as blob.
+        const downloadFilename = filename.toLowerCase().endsWith('.wav') ? filename : `${filename}.wav`
 
-        // For simplicity, let's try the fetch blob approach:
-        fetch(`${apiBaseUrl}/recordings/by-id/${id}/file`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
+        try {
+            const response = await fetch(`${apiBaseUrl}/recordings/by-id/${id}/file`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             })
-            .catch(err => console.error("Download failed", err));
+
+            if (!response.ok) {
+                console.error("Download failed with status:", response.status)
+                toast.error("Failed to download recording. It may not exist.")
+                return
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = downloadFilename
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+            toast.success("Download started")
+        } catch (err) {
+            console.error("Download failed", err)
+            toast.error("An error occurred while downloading.")
+        }
     }
 
     const handleDelete = async (id: number) => {

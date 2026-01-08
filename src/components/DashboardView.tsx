@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Mic } from "lucide-react"
 import type { ScheduledRoutine } from "../types/api"
 import type { User, Child, Analysis } from "@/lib/api/types"
@@ -42,7 +43,27 @@ export function DashboardView({
   onAddChild,
   onRefresh,
 }: DashboardViewProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("home")
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const [activeTab, setActiveTabState] = useState<TabType>("home")
+
+  // Sync state with URL on mount and param change
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab && ["home", "family", "records", "alerts", "settings"].includes(tab)) {
+      setActiveTabState(tab as TabType)
+    }
+  }, [searchParams])
+
+  // Helper to update state and URL
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabState(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", tab)
+    router.replace(`${pathname}?${params.toString()}`)
+  }
 
   const showRecordingBar = ["home", "family", "records"].includes(activeTab) && currentChild?.current_user_role !== "spectator"
 

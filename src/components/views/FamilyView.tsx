@@ -92,11 +92,41 @@ interface AddMemberCardProps {
   onRefresh: () => Promise<void>
 }
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+
 function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
+  const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [tempAudioFile, setTempAudioFile] = useState<File | null>(null)
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'recorded'>('idle')
   const [isSaving, setIsSaving] = useState(false)
+
+  // New fields
+  const [gender, setGender] = useState<string>("male")
+  const [birthdate, setBirthdate] = useState<Date | undefined>(undefined)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -147,15 +177,27 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
 
   const handleSave = async () => {
     if (!name || !tempAudioFile) return
+    if (type === 'child' && (!birthdate || !gender)) return
 
     setIsSaving(true)
     try {
       // Step 1: Create Profile (JSON)
       const finalName = type === "parent" ? `${name} (Parent)` : name
-      const payload = {
+
+      const payload: any = {
         name: finalName,
-        birthdate: new Date().toISOString().split('T')[0],
-        gender: "male"
+      }
+
+      if (type === 'child') {
+        payload.birthdate = birthdate ? format(birthdate, "yyyy-MM-dd") : new Date().toISOString().split('T')[0]
+        payload.gender = gender
+      } else {
+        // Default for parent if needed, though backend model might require it. 
+        // Assuming parent doesn't strictly need it or we default it.
+        // But the existing code defaulted to "male" and today's date for everyone.
+        // Let's keep a safe default if not adding fields for parent.
+        payload.birthdate = new Date().toISOString().split('T')[0]
+        payload.gender = "male"
       }
 
       const childResponse = await apiFetch<Child>('/children/', {
@@ -182,9 +224,12 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
       }
 
       // Step 3: Cleanup & Refresh
+      setOpen(false)
       setName("")
       setTempAudioFile(null)
       setRecordingState('idle')
+      setBirthdate(undefined)
+      setGender("male")
       await onRefresh()
 
     } catch (error) {
@@ -195,36 +240,98 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
     }
   }
 
-  return (
-    <Card className="border-dashed border-muted-foreground/30 bg-muted/20">
-      <CardContent className="p-4 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            {type === "parent" ? "Add Parent" : "Add Child"}
-          </h3>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-background"
-            disabled={isSaving}
-          />
-        </div>
+  const resetForm = () => {
+    setName("")
+    setTempAudioFile(null)
+    setRecordingState('idle')
+    setBirthdate(undefined)
+    setGender("male")
+  }
 
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground italic">
-            {recordingState === 'recording' ? "Recording..." :
-              recordingState === 'recorded' ? "Voice sample recorded" :
-                "Record a 5-second voice sample"}
-          </p>
-          <div className="flex gap-2">
-            {/* Recording Button */}
+  return (
+    <Dialog open={open} onOpenChange={(open) => {
+      setOpen(open)
+      if (!open) resetForm()
+    }}>
+      <DialogTrigger asChild>
+        <Card className="border-dashed border-muted-foreground/30 bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors flex items-center justify-center p-6 h-full min-h-[100px]">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <div className="bg-background p-2 rounded-full border border-dashed">
+              <Plus className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium">{type === "parent" ? "Add Parent" : "Add Child"}</span>
+          </div>
+        </Card>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{type === "parent" ? "Add Parent" : "Add Child"}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Input
+              id="name"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isSaving}
+            />
+          </div>
+
+          {type === 'child' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Select value={gender} onValueChange={setGender} disabled={isSaving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Boy</SelectItem>
+                    <SelectItem value="female">Girl</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !birthdate && "text-muted-foreground"
+                      )}
+                      disabled={isSaving}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {birthdate ? format(birthdate, "PPP") : <span>Date of Birth</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={birthdate}
+                      onSelect={setBirthdate}
+                      initialFocus
+                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center justify-between border rounded-md p-3 bg-muted/20">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Voice Sample</span>
+              <span className="text-xs text-muted-foreground">
+                {recordingState === 'recording' ? "Recording..." :
+                  recordingState === 'recorded' ? "Recorded" : "5-second sample"}
+              </span>
+            </div>
+
             <Button
               size="icon"
-              variant={recordingState === 'recorded' ? "default" : recordingState === 'recording' ? "destructive" : "outline"}
-              className={recordingState === 'recorded' ? "bg-green-500 hover:bg-green-600 text-white" : ""}
+              variant={recordingState === 'recorded' ? "outline" : recordingState === 'recording' ? "destructive" : "secondary"}
+              className={recordingState === 'recorded' ? "text-green-600 border-green-200 bg-green-50" : ""}
               onClick={() => recordingState === 'recording' ? handleStopRecording() : handleStartRecording()}
               disabled={isSaving}
             >
@@ -232,18 +339,14 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
                 recordingState === 'recorded' ? <Check className="h-4 w-4" /> :
                   <Mic className="h-4 w-4" />}
             </Button>
-
-            {/* Save Button */}
-            <Button
-              size="icon"
-              disabled={!name || !tempAudioFile || isSaving}
-              onClick={handleSave}
-            >
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <DialogFooter>
+          <Button onClick={handleSave} disabled={isSaving || !name || !tempAudioFile || (type === 'child' && (!birthdate || !gender))}>
+            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Create Profile"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -17,6 +17,7 @@ export function AlertsView() {
   const [isOpen, setIsOpen] = useState(false)
   const [newLabel, setNewLabel] = useState("")
   const [newTime, setNewTime] = useState("09:00")
+  const [newEndTime, setNewEndTime] = useState("10:00")
   const [newDays, setNewDays] = useState<number[]>([])
 
   const handleAdd = () => {
@@ -25,6 +26,7 @@ export function AlertsView() {
     addReminder({
       label: newLabel,
       time: newTime,
+      endTime: newEndTime,
       days: newDays,
       isEnabled: true
     })
@@ -32,6 +34,7 @@ export function AlertsView() {
     setIsOpen(false)
     setNewLabel("")
     setNewTime("09:00")
+    setNewEndTime("10:00")
     setNewDays([])
   }
 
@@ -90,6 +93,18 @@ export function AlertsView() {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="endTime" className="text-right">
+                  End Time
+                </Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={newEndTime}
+                  onChange={(e) => setNewEndTime(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
               <div className="grid grid-cols-4 items-start gap-4">
                 <Label className="text-right mt-2">Days</Label>
                 <div className="col-span-3 flex gap-2 flex-wrap">
@@ -144,7 +159,7 @@ export function AlertsView() {
                       {reminder.label}
                     </h4>
                     <div className="flex items-center text-sm text-muted-foreground mt-0.5 space-x-2">
-                      <span>{reminder.time}</span>
+                      <span>{reminder.time} {reminder.endTime && `- ${reminder.endTime}`}</span>
                       <span>•</span>
                       <span className="truncate">
                         {reminder.days.length === 0
