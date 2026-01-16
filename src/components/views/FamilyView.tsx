@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import type { Child } from "../../types/api"
-import { Check, Plus, Mic, Save, Loader2, StopCircle, RefreshCw, Square } from "lucide-react"
+import { Check, Plus, Mic, Save, Loader2, StopCircle, RefreshCw, Square, Upload } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -130,6 +130,30 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith("audio/")) {
+        setTempAudioFile(file)
+        setRecordingState('recorded')
+        toast.success("Audio file selected")
+      } else {
+        toast.error("Please upload an audio file")
+      }
+    }
+  }
+
+  const triggerFileInput = () => {
+    // Use setTimeout to decouple the click from the current event loop
+    // preventing potential focus loss issues with the Dialog
+    setTimeout(() => {
+      fileInputRef.current?.click()
+    }, 0)
+  }
 
   const handleStartRecording = async () => {
     try {
@@ -211,16 +235,20 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
       // Step 2: Upload Audio (FormData)
       const formData = new FormData()
       formData.append("file", tempAudioFile)
+      // Voice Stamps require a speaker_name. For a child, it's the child's name.
+      formData.append("speaker_name", finalName)
+      // We must also associate it with the child_id
+      formData.append("child_id", childId.toString())
 
       try {
-        await apiFetch(`/recordings/?child_id=${childId}`, {
+        await apiFetch(`/voice-stamps/`, {
           method: 'POST',
           body: formData
         })
         toast.success("Profile created successfully!")
       } catch (uploadError) {
         console.error("Audio upload failed", uploadError)
-        toast.warning("Profile created, but audio upload failed.")
+        toast.warning("Profile created, but voice stamp upload failed.")
       }
 
       // Step 3: Cleanup & Refresh
@@ -329,16 +357,43 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
             </div>
 
             <Button
+              type="button"
               size="icon"
               variant={recordingState === 'recorded' ? "outline" : recordingState === 'recording' ? "destructive" : "secondary"}
               className={recordingState === 'recorded' ? "text-green-600 border-green-200 bg-green-50" : ""}
-              onClick={() => recordingState === 'recording' ? handleStopRecording() : handleStartRecording()}
+              onClick={(e) => {
+                e.preventDefault()
+                recordingState === 'recording' ? handleStopRecording() : handleStartRecording()
+              }}
               disabled={isSaving}
             >
               {recordingState === 'recording' ? <Square className="h-4 w-4 animate-pulse fill-current" /> :
                 recordingState === 'recorded' ? <Check className="h-4 w-4" /> :
                   <Mic className="h-4 w-4" />}
             </Button>
+
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="ml-2"
+              onClick={(e) => {
+                e.preventDefault()
+                triggerFileInput()
+              }}
+              disabled={isSaving || recordingState === 'recording'}
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="audio/*"
+              onChange={handleFileUpload}
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
         <DialogFooter>

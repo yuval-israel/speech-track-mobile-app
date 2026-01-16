@@ -47,9 +47,33 @@ export function useRecordings(childId: number | undefined): UseRecordingsResult 
         }
     }, []);
 
+    // Initial fetch on mount or when childId changes
     useEffect(() => {
         fetchRecordings();
     }, [fetchRecordings]);
+
+    // Smart polling - only poll when there are recordings being processed
+    useEffect(() => {
+        // Check if any recordings are in a processing state
+        const hasProcessingRecordings = recordings.some(r =>
+            r.status === 'pending' ||
+            r.status === 'queued' ||
+            r.status === 'transcribing' ||
+            r.status === 'analyzing'
+        );
+
+        if (!hasProcessingRecordings) {
+            // No processing recordings, no need to poll
+            return;
+        }
+
+        // Poll every 3 seconds while recordings are processing
+        const interval = setInterval(() => {
+            fetchRecordings();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [recordings, fetchRecordings]);
 
     return {
         recordings,

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Mic, ChevronRight, Loader2 } from "lucide-react"
+import { Mic, ChevronRight, Loader2, Upload } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,7 @@ interface VoiceStampFlowProps {
 export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
   const [step, setStep] = useState(1)
   const [isRecording, setIsRecording] = useState(false)
+  const [speakerName, setSpeakerName] = useState("Parent")
   const [childName, setChildName] = useState("")
   const [dob, setDob] = useState("")
   const [gender, setGender] = useState("")
@@ -23,6 +24,7 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
 
   const startRecording = async () => {
@@ -68,6 +70,22 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
     }
   }
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith("audio/")) {
+        setAudioBlob(file)
+        toast.success("Audio file selected")
+      } else {
+        toast.error("Please upload an audio file")
+      }
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
+
   const handleNext = async () => {
     if (step === 1) {
       // Logic for Parent Voice Step
@@ -85,7 +103,7 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
         try {
           const formData = new FormData()
           formData.append("file", audioBlob, "parent_voice.wav")
-          formData.append("speaker_name", "Parent")
+          formData.append("speaker_name", speakerName || "Parent")
           // No child_id for parent
 
           await apiFetch("/voice-stamps/", {
@@ -143,6 +161,18 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
               </div>
             </div>
 
+            {/* Speaker Name Input */}
+            <Card className="bg-white border-0 shadow-sm rounded-2xl p-6">
+              <label className="block text-sm font-medium text-slate-900 mb-2">Your Name (for transcription)</label>
+              <Input
+                type="text"
+                placeholder="e.g. Dad, Mom, Yuval"
+                value={speakerName}
+                onChange={(e) => setSpeakerName(e.target.value)}
+                className="rounded-xl border-slate-300"
+              />
+            </Card>
+
             {/* Instruction Text */}
             <Card className="bg-white border-0 shadow-sm rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-3">Let's learn your voice first</h2>
@@ -161,14 +191,40 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
             </Card>
 
             {/* Recording Button */}
-            <Button
-              onClick={toggleRecording}
-              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-            >
-              <Mic className="w-5 h-5 mr-2" />
-              {isRecording ? "Stop Recording" : "Start Recording"}
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={toggleRecording}
+                className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }`}
+              >
+                <Mic className="w-5 h-5 mr-2" />
+                {isRecording ? "Stop Recording" : (audioBlob ? "Rerecord" : "Start Recording")}
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-slate-50 px-2 text-slate-500">Or</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={triggerFileInput}
+                className="w-full py-4 rounded-full font-semibold text-base border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                Upload Audio File
+              </Button>
+            </div>
+
+            {audioBlob && !isRecording && (
+              <div className="text-center text-sm text-green-600 font-medium">
+                Audio ready to submit!
+              </div>
+            )}
 
             <Button
               onClick={handleNext}
@@ -293,14 +349,49 @@ export function VoiceStampFlow({ isParent, onComplete }: VoiceStampFlowProps) {
             </Card>
 
             {/* Recording Button - Playful Teal */}
-            <Button
-              onClick={toggleRecording}
-              className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-teal-600 hover:bg-teal-700 text-white"
-                }`}
-            >
-              <Mic className="w-5 h-5 mr-2" />
-              {isRecording ? "Stop Recording" : "Start Recording"}
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={toggleRecording}
+                className={`w-full py-4 rounded-full font-semibold text-base transition-all ${isRecording ? "bg-red-600 hover:bg-red-700 text-white" : "bg-teal-600 hover:bg-teal-700 text-white"
+                  }`}
+              >
+                <Mic className="w-5 h-5 mr-2" />
+                {isRecording ? "Stop Recording" : (audioBlob ? "Rerecord" : "Start Recording")}
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-slate-50 px-2 text-slate-500">Or</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={triggerFileInput}
+                className="w-full py-4 rounded-full font-semibold text-base border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                Upload Audio File
+              </Button>
+            </div>
+
+            {audioBlob && !isRecording && (
+              <div className="text-center text-sm text-teal-600 font-medium">
+                Audio ready to submit!
+              </div>
+            )}
+
+            {/* Hidden Input for both steps */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="audio/*"
+              onChange={handleFileUpload}
+            />
 
             {/* Navigation */}
             <div className="flex gap-3">

@@ -21,6 +21,28 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const file = e.target.files?.[0]
+        if (file) {
+            if (file.type.startsWith("audio/")) {
+                setAudioBlob(file)
+                setAudioUrl(URL.createObjectURL(file))
+                toast.success("Audio file selected")
+            } else {
+                toast.error("Please upload an audio file")
+            }
+        }
+    }
+
+    const triggerFileInput = () => {
+        setTimeout(() => {
+            fileInputRef.current?.click()
+        }, 0)
+    }
 
     const startRecording = async () => {
         try {
@@ -88,7 +110,9 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
         setIsUploading(true)
         try {
             const formData = new FormData()
-            formData.append("file", audioBlob, "parent_voice.wav")
+            // Ensure the file has the correct MIME type (audio/wav)
+            const wavFile = new File([audioBlob], "parent_voice.wav", { type: "audio/wav" })
+            formData.append("file", wavFile)
             formData.append("speaker_name", "Parent")
 
             await apiFetch("/voice-stamps/", {
@@ -127,22 +151,50 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
 
             <div className="flex flex-col gap-3">
                 {!audioBlob ? (
-                    <Button
-                        size="lg"
-                        variant={isRecording ? "destructive" : "default"}
-                        className="w-full h-12 rounded-full font-medium"
-                        onClick={isRecording ? stopRecording : startRecording}
-                    >
-                        {isRecording ? (
-                            <>
-                                <Square className="w-4 h-4 mr-2" /> Stop Recording
-                            </>
-                        ) : (
-                            <>
-                                <Mic className="w-4 h-4 mr-2" /> Start Recording
-                            </>
-                        )}
-                    </Button>
+                    <>
+                        <Button
+                            size="lg"
+                            variant={isRecording ? "destructive" : "default"}
+                            className="w-full h-12 rounded-full font-medium"
+                            onClick={isRecording ? stopRecording : startRecording}
+                        >
+                            {isRecording ? (
+                                <>
+                                    <Square className="w-4 h-4 mr-2" /> Stop Recording
+                                </>
+                            ) : (
+                                <>
+                                    <Mic className="w-4 h-4 mr-2" /> Start Recording
+                                </>
+                            )}
+                        </Button>
+
+                        <div className="relative my-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-slate-200 dark:border-slate-800" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-white dark:bg-slate-950 px-2 text-slate-500">Or</span>
+                            </div>
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            className="w-full h-12 rounded-full font-medium"
+                            onClick={triggerFileInput}
+                        >
+                            <Upload className="w-4 h-4 mr-2" /> Upload Audio File
+                        </Button>
+
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="audio/*"
+                            onChange={handleFileUpload}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </>
                 ) : (
                     <>
                         <div className="flex gap-3">
@@ -189,14 +241,16 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
             </div>
 
             {/* Hidden Audio Element for Playback */}
-            {audioUrl && (
-                <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    onEnded={handleEnded}
-                    className="hidden"
-                />
-            )}
-        </div>
+            {
+                audioUrl && (
+                    <audio
+                        ref={audioRef}
+                        src={audioUrl}
+                        onEnded={handleEnded}
+                        className="hidden"
+                    />
+                )
+            }
+        </div >
     )
 }

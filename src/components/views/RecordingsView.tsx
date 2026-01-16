@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { Play, Download, Trash2, FileAudio, Calendar, Clock } from "lucide-react"
+import { Play, Download, Trash2, FileAudio, Calendar, Clock, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -18,6 +18,7 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
         currentChild ? parseInt(currentChild.id) : undefined
     )
     const [playingId, setPlayingId] = useState<number | null>(null)
+    const [retranscribingId, setRetranscribingId] = useState<number | null>(null)
 
     const handlePlay = (id: number) => {
         setPlayingId(playingId === id ? null : id)
@@ -64,6 +65,42 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
     const handleDelete = async (id: number) => {
         if (window.confirm("Are you sure you want to delete this recording?")) {
             await deleteRecording(id)
+        }
+    }
+
+    const handleRetranscribe = async (id: number) => {
+        const token = localStorage.getItem("access_token")
+        if (!token) {
+            toast.error("You must be logged in to retranscribe recordings.")
+            return
+        }
+
+        if (!window.confirm("Are you sure you want to retranscribe this recording? This will replace the existing transcription.")) {
+            return
+        }
+
+        setRetranscribingId(id)
+        try {
+            const response = await fetch(`${apiBaseUrl}/recordings/by-id/${id}/retranscribe`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            if (!response.ok) {
+                console.error("Retranscribe failed with status:", response.status)
+                toast.error("Failed to retranscribe recording.")
+                return
+            }
+
+            toast.success("Recording is being retranscribed...")
+            // The recording status should update automatically via polling/refresh
+        } catch (err) {
+            console.error("Retranscribe failed", err)
+            toast.error("An error occurred while retranscribing.")
+        } finally {
+            setRetranscribingId(null)
         }
     }
 
@@ -133,8 +170,19 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                    {/* Audio Player control could go here if we had a direct URL */}
-                                    {/* For now, play button is a placeholder or could toggle an audio element if URL known */}
+                                    {/* Retranscribe button - only show for ready or failed recordings */}
+                                    {(recording.status === 'ready' || recording.status === 'failed') && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-slate-500 hover:text-primary"
+                                            onClick={() => handleRetranscribe(recording.id)}
+                                            disabled={retranscribingId === recording.id}
+                                            title="Retranscribe"
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${retranscribingId === recording.id ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    )}
 
                                     <Button
                                         variant="ghost"

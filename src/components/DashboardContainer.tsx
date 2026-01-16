@@ -34,9 +34,21 @@ export function DashboardContainer({
   }
 
   // Refetch data when window gains focus or becomes visible
+  // DISABLED: This was causing issues with file pickers and dialogs
+  // Users can manually refresh if needed
+  /*
   useEffect(() => {
+    let focusTimeoutId: NodeJS.Timeout | null = null
+
     const onFocus = () => {
-      refetch(currentChildId || undefined)
+      // Clear any pending timeout
+      if (focusTimeoutId) {
+        clearTimeout(focusTimeoutId)
+      }
+      // Wait 500ms before refetching to avoid triggering on file pickers
+      focusTimeoutId = setTimeout(() => {
+        refetch(currentChildId || undefined)
+      }, 500)
     }
 
     window.addEventListener("focus", onFocus)
@@ -50,10 +62,14 @@ export function DashboardContainer({
     document.addEventListener("visibilitychange", onVisibilityChange)
 
     return () => {
+      if (focusTimeoutId) {
+        clearTimeout(focusTimeoutId)
+      }
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
   }, [refetch, currentChildId])
+  */
 
   // Handle recording upload
   const handleRecordingUpload = async (file: File, duration: number) => {
