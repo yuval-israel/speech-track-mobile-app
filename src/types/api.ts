@@ -1,4 +1,4 @@
-import { InteractionAnalysis } from "@/lib/api/types"
+import { InteractionAnalysis, InteractionAggregates } from "@/lib/api/types"
 
 export interface User {
   id: string
@@ -33,6 +33,7 @@ export interface Analysis {
   vocabulary_diversity: number
   created_at?: string
   interaction_analysis?: InteractionAnalysis
+  interaction_aggregates?: InteractionAggregates
   ttr: number
 }
 

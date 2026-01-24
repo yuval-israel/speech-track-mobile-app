@@ -14,13 +14,17 @@ interface MetricsCardProps {
   description?: string
   chartData?: Array<{ name: string; value: number }>
   type?: "bar" | "text" | "chart"
+  variant?: "default" | "tinted"
 }
 
-export function MetricsCard({ title, value, trend, trendUp, description, chartData, type = "text" }: MetricsCardProps) {
+export function MetricsCard({ title, value, trend, trendUp, description, chartData, type = "text", variant = "default" }: MetricsCardProps) {
   const { isRTL } = useLanguage()
 
   return (
-    <Card className={`rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border-muted ${isRTL ? "rtl" : ""}`}>
+    <Card className={`rounded-2xl transition-all ${variant === "tinted"
+        ? "bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 shadow-sm"
+        : "bg-gradient-to-br from-muted/50 to-muted/20 border-muted"
+      } ${isRTL ? "rtl" : ""}`}>
       <CardHeader className={`flex flex-row items-center justify-between space-y-0 pb-2 ${isRTL ? "flex-row-reverse" : ""}`}>
         <CardTitle className={`text-sm font-medium ${isRTL ? "text-right" : ""}`}>{title}</CardTitle>
         {description && (

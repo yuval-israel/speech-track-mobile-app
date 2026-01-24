@@ -134,6 +134,8 @@ export interface RecordingAnalysisOut {
   interaction_analysis?: InteractionAnalysis | null;
 }
 
+export type RecordingAnalysis = RecordingAnalysisOut;
+
 export interface ChildAggregates {
   total_sessions: number;
   total_speech_duration_seconds: number;
@@ -151,6 +153,8 @@ export interface ChildGlobalAnalysisOut {
   child_name?: string | null;
   aggregates: ChildAggregates;
 }
+
+export type ChildGlobalAnalysis = ChildGlobalAnalysisOut;
 
 // Frontend specific types
 export interface POSDistribution {

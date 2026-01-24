@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { apiFetch } from "@/lib/api/client"
-import { UserOut, ChildOut, ChildGlobalAnalysisOut, adaptAnalysis, Analysis } from "@/lib/api/types"
+import { UserOut, ChildOut, ChildGlobalAnalysisOut, RecordingAnalysis, ChildGlobalAnalysis, adaptAnalysis, Analysis } from "@/lib/api/types"
 import { DashboardData } from "@/src/types/api"
 
 const toISODateString = (date: Date) => date.toISOString().split('T')[0];
@@ -10,6 +10,8 @@ export function useDashboardData() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [partialErrors, setPartialErrors] = useState<Record<string, string>>({})
+    const [latest, setLatest] = useState<RecordingAnalysis | null>(null)
+    const [global, setGlobal] = useState<ChildGlobalAnalysis | null>(null)
 
     const fetchData = useCallback(async (forcedChildId?: string) => {
         try {
@@ -61,16 +63,23 @@ export function useDashboardData() {
 
             try {
                 const [latestData, globalData] = await Promise.all([
-                    apiFetch<any>(`/analysis/children/${currentChildId}/latest`).catch(e => {
+                    apiFetch<RecordingAnalysis>(`/analysis/children/${currentChildId}/latest`).catch(e => {
+                        // Handle 404 gracefully - it just means no recordings are ready yet
+                        if (e.message.includes("404") || e.message.includes("not found")) {
+                            return null;
+                        }
                         console.warn("Latest analysis fetch failed", e);
                         return null;
                     }),
-                    apiFetch<ChildGlobalAnalysisOut>(`/analysis/children/${currentChildId}/global`).catch(e => {
+                    apiFetch<ChildGlobalAnalysis>(`/analysis/children/${currentChildId}/global`).catch(e => {
                         console.warn("Global analysis fetch failed", e);
                         currentPartialErrors.analysis = 'Failed to load analysis';
                         return null;
                     })
                 ]);
+
+                setLatest(latestData);
+                setGlobal(globalData);
 
                 if (latestData) lastSession = adaptAnalysis(latestData);
                 if (globalData) total = adaptAnalysis(globalData);
@@ -130,5 +139,5 @@ export function useDashboardData() {
         fetchData()
     }, [fetchData])
 
-    return { data, loading, error, partialErrors, refetch: fetchData }
+    return { global, latest, data, loading, error, partialErrors, refetch: fetchData }
 }

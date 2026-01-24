@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type Category = 'General' | 'Interaction' | 'Vocabulary' | 'Syntax' | 'Fluency'
+type Category = 'General' | 'Interaction' | 'Vocabulary' | 'Sentences'
 
 
 interface HomeViewProps {
@@ -40,7 +40,7 @@ export function HomeView({
   onNavigateToFamily
 }: HomeViewProps) {
   const { t, isRTL } = useLanguage()
-  const [selectedCategory, setSelectedCategory] = useState<Category>('General')
+  const [selectedCategory, setSelectedCategory] = useState<Category>('Interaction')
 
   // Empty State
   if (!currentChild) {
@@ -117,6 +117,7 @@ export function HomeView({
             chartData={isChart ? lastVal : undefined}
             trend={!isChart ? trend : undefined}
             trendUp={!isChart ? trendUp : undefined}
+            variant="tinted"
           />
           <MetricsCard
             title=""
@@ -129,27 +130,19 @@ export function HomeView({
     )
   }
 
-  const renderInteractionCharts = (analysis: Analysis | null) => {
-    if (!analysis?.interaction_analysis) return []
-    const data = analysis.interaction_analysis.turn_taking_patterns.map(p => ({
-      name: p.pair,
-      value: p.count
-    }))
-    return data
+  const renderTurnCount = (analysis: Analysis | null) => {
+    if (!analysis) return "-"
+    if (analysis.interaction_analysis) {
+      return analysis.interaction_analysis.turn_taking_patterns.reduce((sum, p) => sum + p.count, 0)
+    }
+    return analysis.interaction_aggregates?.total_turns_count ?? "-"
   }
 
   const renderInitiationValue = (analysis: Analysis | null) => {
-    if (!analysis) return "N/A"
+    if (!analysis) return "-"
     return analysis.interaction_analysis?.initiation_rate['child']
-      ?? analysis.interaction_aggregates?.average_initiations_per_session
-      ?? "N/A"
-  }
-
-  const renderGapValue = (analysis: Analysis | null) => {
-    if (!analysis) return "N/A"
-    return analysis.interaction_analysis?.average_interactional_gap
-      ?? analysis.interaction_aggregates?.average_gap_duration
-      ?? "N/A"
+      ?? analysis.interaction_aggregates?.total_initiations_child
+      ?? "-"
   }
 
   const renderPOSChart = (analysis: Analysis | null) => {
@@ -163,42 +156,33 @@ export function HomeView({
 
   const renderCategoryContent = () => {
     switch (selectedCategory) {
-      case 'General':
-        return (
-          <div className="space-y-6">
-            {renderMetricRow("metrics.mlu", "mlu")}
-            {renderMetricRow("metrics.total_tokens", "total_tokens")}
-            {renderMetricRow("metrics.unique_words", "unique_tokens")}
-            {renderMetricRow("metrics.ttr", "ttr")}
-          </div>
-        )
       case 'Interaction':
         return (
           <div className="space-y-6">
-            {renderMetricRow("metrics.turn_distribution", "interaction_analysis.turn_taking_patterns", true, renderInteractionCharts)}
-            {renderMetricRow("metrics.initiation_ratio", "", false, renderInitiationValue)}
-            {renderMetricRow("metrics.average_gap", "", false, renderGapValue)}
+            {renderMetricRow("מספר חילופי התורות", "", false, renderTurnCount)}
+            {renderMetricRow("שיעור פתיחת אינטראקציות", "", false, renderInitiationValue)}
           </div>
         )
       case 'Vocabulary':
         return (
           <div className="space-y-6">
-            {renderMetricRow("metrics.total_tokens", "total_tokens")}
-            {renderMetricRow("metrics.unique_words", "unique_tokens")}
-            {renderMetricRow("metrics.ttr", "ttr")}
+            {renderMetricRow("סך כל יחידות השפה", "total_tokens")}
+            {renderMetricRow("מספר המילים השונות", "unique_tokens")}
+            {renderMetricRow("מדד גיוון המילים", "ttr")}
           </div>
         )
-      case 'Syntax':
+      case 'Sentences':
         return (
           <div className="space-y-6">
-            {renderMetricRow("metrics.mlu", "mlu")}
-            {renderMetricRow("metrics.pos", "pos_distribution", true, renderPOSChart)}
+            {renderMetricRow("מספר המילים הממוצע במשפט", "mlu")}
           </div>
         )
-      case 'Fluency':
+      case 'General':
         return (
           <div className="space-y-6">
-            {renderMetricRow("metrics.fluency_score", "fluency_score")}
+            {renderMetricRow("מספר המילים הממוצע במשפט", "mlu")}
+            {renderMetricRow("סך כל יחידות השפה", "total_tokens")}
+            {renderMetricRow("מספר המילים השונות", "unique_tokens")}
           </div>
         )
       default:
@@ -220,30 +204,19 @@ export function HomeView({
       {/* Category Selector */}
       <div className="space-y-2">
         <label className={`text-sm font-medium ${isRTL ? "text-right block w-full" : ""}`}>
-          {isRTL ? "בחר קטגוריה" : "Select Metric Category"}
+          {isRTL ? "בחר מדד" : "Select Metric"}
         </label>
-        <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as Category)}>
+        <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as Category)} dir={isRTL ? "rtl" : "ltr"}>
           <SelectTrigger className="w-full rounded-xl">
             <SelectValue placeholder="Select Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="General">{t("categories.General")}</SelectItem>
-            <SelectItem value="Interaction">{t("categories.Interaction")}</SelectItem>
-            <SelectItem value="Vocabulary">{t("categories.Vocabulary")}</SelectItem>
-            <SelectItem value="Syntax">{t("categories.Syntax")}</SelectItem>
-            <SelectItem value="Fluency">{t("categories.Fluency")}</SelectItem>
+            <SelectItem value="General">{isRTL ? "כללי" : "General"}</SelectItem>
+            <SelectItem value="Interaction">{isRTL ? "אינטראקציה" : "Interaction"}</SelectItem>
+            <SelectItem value="Vocabulary">{isRTL ? "אוצר מילים" : "Vocabulary"}</SelectItem>
+            <SelectItem value="Sentences">{isRTL ? "משפטים / MLU" : "Sentences"}</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Split View Header */}
-      <div className={`grid grid-cols-2 gap-4 border-b border-border pb-2 ${isRTL ? "rtl" : ""}`}>
-        <div className="text-center font-semibold">
-          {isRTL ? "אימון אחרון" : "Last Session"}
-        </div>
-        <div className="text-center font-semibold">
-          {isRTL ? "ממוצע כללי" : "Total / Average"}
-        </div>
       </div>
 
       <div className="space-y-2">
@@ -255,6 +228,16 @@ export function HomeView({
             onRecord={onOpenRecording}
           />
         ))}
+      </div>
+
+      {/* Split View Header */}
+      <div className={`grid grid-cols-2 gap-4 border-b border-border pb-2 ${isRTL ? "rtl" : ""}`}>
+        <div className="text-center font-semibold text-sm">
+          {isRTL ? "אימון אחרון" : "Last Session"}
+        </div>
+        <div className="text-center font-semibold text-sm">
+          {isRTL ? "ממוצע / סה״כ" : "Total / Average"}
+        </div>
       </div>
 
       <div className="animate-in fade-in duration-500">
