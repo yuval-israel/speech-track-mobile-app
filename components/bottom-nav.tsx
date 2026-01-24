@@ -3,8 +3,8 @@
 import { Home, Users, Mic, BarChart3, Bell } from "lucide-react"
 
 interface BottomNavProps {
-  activeTab: "home" | "family" | "record" | "data" | "alerts"
-  onTabChange: (tab: "home" | "family" | "record" | "data" | "alerts") => void
+  activeTab: "home" | "family" | "record" | "alerts"
+  onTabChange: (tab: "home" | "family" | "record" | "alerts") => void
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
@@ -12,7 +12,6 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: "home", label: "Home", icon: Home },
     { id: "family", label: "Family", icon: Users },
     { id: "record", label: "Record", icon: Mic, isFab: true },
-    { id: "data", label: "Data", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },
   ] as const
 

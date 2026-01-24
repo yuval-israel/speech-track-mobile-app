@@ -33,8 +33,8 @@ export function useDashboardData() {
                     },
                     children: [],
                     currentChild: null as any, // Handled by DashboardView null check
-                    latestAnalysis: null,
-                    weeklyProgress: [],
+                    lastSession: null,
+                    total: null,
                     missedRecordings: [],
                     routines: []
                 }
@@ -47,52 +47,41 @@ export function useDashboardData() {
             const currentChildId = forcedChildId || children[0].id.toString()
             const currentChild = children.find(c => c.id.toString() === currentChildId) || children[0]
 
-            // 3. Get Analysis for current child
-            let analysis: Analysis | null = null;
-            try {
-                const globalAnalysis = await apiFetch<ChildGlobalAnalysisOut>(`/analysis/children/${currentChildId}/global`)
-                analysis = adaptAnalysis(globalAnalysis)
-            } catch (e) {
-                console.warn("Could not fetch analysis", e)
-                currentPartialErrors.analysis = 'Failed to load analysis'
-            }
-
-            // 4. Get Recordings History
+            // 3. Get Recordings History (Used for weekly progress)
             let recordings: any[] = []
             try {
-                const fetchedRecordings = await apiFetch<any[]>(`/recordings/${currentChildId}`)
-                recordings = fetchedRecordings
+                recordings = await apiFetch<any[]>(`/recordings/${currentChildId}`)
             } catch (e) {
                 console.warn("Could not fetch recordings", e)
-                // We don't mark this as a partial error necessarily, or maybe we should?
-                // For now, following logic that if recordings fail, we assume empty.
             }
 
-            // Calculate weekly progress
+            // 4. Fetch Analysis in Parallel
+            let lastSession: Analysis | null = null;
+            let total: Analysis | null = null;
+
+            try {
+                const [latestData, globalData] = await Promise.all([
+                    apiFetch<any>(`/analysis/children/${currentChildId}/latest`).catch(e => {
+                        console.warn("Latest analysis fetch failed", e);
+                        return null;
+                    }),
+                    apiFetch<ChildGlobalAnalysisOut>(`/analysis/children/${currentChildId}/global`).catch(e => {
+                        console.warn("Global analysis fetch failed", e);
+                        currentPartialErrors.analysis = 'Failed to load analysis';
+                        return null;
+                    })
+                ]);
+
+                if (latestData) lastSession = adaptAnalysis(latestData);
+                if (globalData) total = adaptAnalysis(globalData);
+            } catch (e) {
+                console.error("Critical parallel fetch error", e);
+            }
+
             const now = new Date()
-            const weeklyProgress = []
             const todayStr = toISODateString(now)
 
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(now)
-                d.setDate(d.getDate() - i)
-                const dateStr = toISODateString(d);
-
-                // Filter recordings for this day
-                // Date format from backend might vary, but usually ISO ish.
-                // Assuming fetchedRecordings[].created_at is ISO string.
-                const daysRecordings = recordings.filter(r => r.created_at.startsWith(dateStr))
-
-                // Calculate metrics
-                weeklyProgress.push({
-                    date: dateStr,
-                    mlu: 0,
-                    tokens: daysRecordings.length
-                })
-            }
-
             // Calculate missed recordings
-            // Check if there is a recording for today
             const hasRecordedToday = recordings.some(r => r.created_at.startsWith(todayStr))
             const missedRecordings = !hasRecordedToday ? [{
                 routine: 'Daily Practice',
@@ -121,8 +110,8 @@ export function useDashboardData() {
                     gender: currentChild.gender,
                     current_user_role: currentChild.current_user_role,
                 },
-                latestAnalysis: analysis,
-                weeklyProgress: weeklyProgress,
+                lastSession: lastSession,
+                total: total,
                 missedRecordings: missedRecordings,
                 routines: [] // Mock
             }

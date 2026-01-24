@@ -3,22 +3,26 @@
 import { useState } from "react"
 import type { User, Child, Analysis } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { GaugeChart } from "../GaugeChart"
 import { MissedRecordingAlert } from "../MissedRecordingAlert"
-import { ProfileSettings } from "../ProfileSettings"
-import { Plus, MessageSquare, Heart } from "lucide-react"
+import { Plus } from "lucide-react"
 import { MetricsCard } from "../MetricsCard"
 import { useLanguage } from "@/contexts/language-context"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-// Recharts imports for the graph
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell } from "recharts"
+type Category = 'General' | 'Interaction' | 'Vocabulary' | 'Syntax' | 'Fluency'
+
 
 interface HomeViewProps {
   user: User
   currentChild: Child | null
-  analysis: Analysis | null
-  weeklyProgress: Array<{ date: string; mlu: number; tokens: number }>
+  lastSession: Analysis | null
+  total: Analysis | null
   missedRecordings: Array<{ routine: string; scheduled_time: string }>
   onOpenRecording: () => void
   onLogout: () => void
@@ -28,14 +32,15 @@ interface HomeViewProps {
 export function HomeView({
   user,
   currentChild,
-  analysis,
-  weeklyProgress,
+  lastSession,
+  total,
   missedRecordings,
   onOpenRecording,
   onLogout,
   onNavigateToFamily
 }: HomeViewProps) {
   const { t, isRTL } = useLanguage()
+  const [selectedCategory, setSelectedCategory] = useState<Category>('General')
 
   // Empty State
   if (!currentChild) {
@@ -63,16 +68,143 @@ export function HomeView({
     )
   }
 
-  // Prepare data for POS chart
-  const posData = analysis?.pos_distribution
-    ? Object.entries(analysis.pos_distribution).map(([name, value]) => ({ name, value }))
-    : []
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  const renderMetricRow = (labelKey: string, valuePath: string, isChart = false, customValue?: (analysis: Analysis | null) => any) => {
+    const getValue = (analysis: Analysis | null) => {
+      if (customValue) return customValue(analysis)
+      if (!analysis) return "N/A"
+      const keys = valuePath.split('.')
+      let val: any = analysis
+      for (const key of keys) {
+        val = val?.[key]
+      }
+      return val ?? "N/A"
+    }
 
-  // Calculate Interaction Metrics
-  const turnExchanges = analysis?.interaction_analysis?.turn_taking_patterns.reduce((sum, p) => sum + p.count, 0) || 0
-  const initiationCount = analysis?.interaction_analysis?.initiation_rate['child'] || 0
+    const lastVal = getValue(lastSession)
+    const globalVal = getValue(total)
+
+    const formatValue = (v: any) => {
+      if (v === "N/A") return v
+      if (typeof v === 'number') {
+        if (Number.isInteger(v)) return v.toString()
+        return v.toFixed(2)
+      }
+      return v.toString()
+    }
+
+    // Trend calculation
+    let trend: string | undefined = undefined
+    let trendUp: boolean | undefined = undefined
+
+    if (typeof lastVal === 'number' && typeof globalVal === 'number' && globalVal !== 0) {
+      const diff = lastVal - globalVal
+      const percent = (diff / globalVal) * 100
+      trend = `${Math.abs(percent).toFixed(0)}%`
+      trendUp = diff >= 0
+    }
+
+    return (
+      <div key={labelKey} className="space-y-2">
+        <label className={`text-xs font-semibold text-muted-foreground uppercase tracking-wider ${isRTL ? "text-right block" : ""}`}>
+          {t(labelKey)}
+        </label>
+        <div className={`grid grid-cols-2 gap-4 ${isRTL ? "rtl" : ""}`}>
+          <MetricsCard
+            title=""
+            value={!isChart ? formatValue(lastVal) : ""}
+            type={isChart ? "chart" : "text"}
+            chartData={isChart ? lastVal : undefined}
+            trend={!isChart ? trend : undefined}
+            trendUp={!isChart ? trendUp : undefined}
+          />
+          <MetricsCard
+            title=""
+            value={!isChart ? formatValue(globalVal) : ""}
+            type={isChart ? "chart" : "text"}
+            chartData={isChart ? globalVal : undefined}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  const renderInteractionCharts = (analysis: Analysis | null) => {
+    if (!analysis?.interaction_analysis) return []
+    const data = analysis.interaction_analysis.turn_taking_patterns.map(p => ({
+      name: p.pair,
+      value: p.count
+    }))
+    return data
+  }
+
+  const renderInitiationValue = (analysis: Analysis | null) => {
+    if (!analysis) return "N/A"
+    return analysis.interaction_analysis?.initiation_rate['child']
+      ?? analysis.interaction_aggregates?.average_initiations_per_session
+      ?? "N/A"
+  }
+
+  const renderGapValue = (analysis: Analysis | null) => {
+    if (!analysis) return "N/A"
+    return analysis.interaction_analysis?.average_interactional_gap
+      ?? analysis.interaction_aggregates?.average_gap_duration
+      ?? "N/A"
+  }
+
+  const renderPOSChart = (analysis: Analysis | null) => {
+    if (!analysis?.pos_distribution) return []
+    const data = Object.entries(analysis.pos_distribution).map(([name, value]) => ({
+      name,
+      value
+    }))
+    return data
+  }
+
+  const renderCategoryContent = () => {
+    switch (selectedCategory) {
+      case 'General':
+        return (
+          <div className="space-y-6">
+            {renderMetricRow("metrics.mlu", "mlu")}
+            {renderMetricRow("metrics.total_tokens", "total_tokens")}
+            {renderMetricRow("metrics.unique_words", "unique_tokens")}
+            {renderMetricRow("metrics.ttr", "ttr")}
+          </div>
+        )
+      case 'Interaction':
+        return (
+          <div className="space-y-6">
+            {renderMetricRow("metrics.turn_distribution", "interaction_analysis.turn_taking_patterns", true, renderInteractionCharts)}
+            {renderMetricRow("metrics.initiation_ratio", "", false, renderInitiationValue)}
+            {renderMetricRow("metrics.average_gap", "", false, renderGapValue)}
+          </div>
+        )
+      case 'Vocabulary':
+        return (
+          <div className="space-y-6">
+            {renderMetricRow("metrics.total_tokens", "total_tokens")}
+            {renderMetricRow("metrics.unique_words", "unique_tokens")}
+            {renderMetricRow("metrics.ttr", "ttr")}
+          </div>
+        )
+      case 'Syntax':
+        return (
+          <div className="space-y-6">
+            {renderMetricRow("metrics.mlu", "mlu")}
+            {renderMetricRow("metrics.pos", "pos_distribution", true, renderPOSChart)}
+          </div>
+        )
+      case 'Fluency':
+        return (
+          <div className="space-y-6">
+            {renderMetricRow("metrics.fluency_score", "fluency_score")}
+          </div>
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="p-4 space-y-6 pb-24">
@@ -83,7 +215,35 @@ export function HomeView({
           </h1>
           <p className="text-slate-500 dark:text-slate-400">Here's how {currentChild.name} is doing</p>
         </div>
+      </div>
 
+      {/* Category Selector */}
+      <div className="space-y-2">
+        <label className={`text-sm font-medium ${isRTL ? "text-right block w-full" : ""}`}>
+          {isRTL ? "בחר קטגוריה" : "Select Metric Category"}
+        </label>
+        <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as Category)}>
+          <SelectTrigger className="w-full rounded-xl">
+            <SelectValue placeholder="Select Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="General">{t("categories.General")}</SelectItem>
+            <SelectItem value="Interaction">{t("categories.Interaction")}</SelectItem>
+            <SelectItem value="Vocabulary">{t("categories.Vocabulary")}</SelectItem>
+            <SelectItem value="Syntax">{t("categories.Syntax")}</SelectItem>
+            <SelectItem value="Fluency">{t("categories.Fluency")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Split View Header */}
+      <div className={`grid grid-cols-2 gap-4 border-b border-border pb-2 ${isRTL ? "rtl" : ""}`}>
+        <div className="text-center font-semibold">
+          {isRTL ? "אימון אחרון" : "Last Session"}
+        </div>
+        <div className="text-center font-semibold">
+          {isRTL ? "ממוצע כללי" : "Total / Average"}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -97,144 +257,9 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="space-y-6">
-        <GaugeChart
-          label={t("metrics.mlu")}
-          value={analysis?.mlu || 0}
-          max={5.0}
-          color="#0ea5e9" // Sky 500
-          subtext={analysis?.mlu ? "Your child is on track for their age group." : "No data available yet."}
-          icon={<MessageSquare className="h-5 w-5" />}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <MetricsCard
-            title={t("metrics.total_tokens")}
-            value={(analysis?.total_tokens || 0).toString()}
-          />
-          <MetricsCard
-            title={t("metrics.unique_words")}
-            value={(analysis?.unique_tokens || 0).toString()}
-          />
-          <MetricsCard
-            title={t("metrics.turn_distribution")}
-            value={turnExchanges.toString()}
-          />
-          <MetricsCard
-            title={t("metrics.initiation_ratio")}
-            value={initiationCount.toString()}
-          />
-          <MetricsCard
-            title={t("metrics.ttr")}
-            value={(analysis?.ttr || 0).toFixed(2)}
-          />
-        </div>
-
-        <GaugeChart
-          label="Interaction & Fluency"
-          value={(analysis?.fluency_score || 0) / 10}
-          max={10.0}
-          color="#8b5cf6" // Violet 500
-          subtext="Fluency interaction score based on recent recordings."
-          icon={<Heart className="h-5 w-5" />}
-        />
+      <div className="animate-in fade-in duration-500">
+        {renderCategoryContent()}
       </div>
-
-      <Card className="bg-gradient-to-br from-primary to-primary/80 text-white border-none overflow-hidden relative">
-        <CardContent className="p-6 relative z-10">
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl font-bold mb-2">Ready to record?</CardTitle>
-              <p className="text-primary-foreground/90 mb-6 max-w-[200px]">
-                Capture {currentChild.name}'s next milestone.
-              </p>
-              <Button
-                onClick={onOpenRecording}
-                variant="secondary"
-                size="lg"
-                className="rounded-full shadow-lg hover:shadow-xl transition-all font-semibold"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                New Recording
-              </Button>
-            </div>
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-20">
-              <div className="h-40 w-40 rounded-full bg-white blur-2xl" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Weekly Progress Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className={isRTL ? "text-right" : ""}>{t("nav.home")} - Weekly Progress</CardTitle>
-          <CardDescription className={isRTL ? "text-right" : ""}>{t("metrics.mlu")} Tracking over time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={weeklyProgress}>
-                <defs>
-                  <linearGradient id="colorMlu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: "#6b7280" }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: "#6b7280" }}
-                />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="mlu"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorMlu)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* POS Distribution Chart (Moved from Data View) */}
-      {posData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className={isRTL ? "text-right" : ""}>{t("metrics.pos")}</CardTitle>
-            <CardDescription className={isRTL ? "text-right" : ""}>Distribution by Part of Speech</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={posData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {posData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
 
     </div>
   )

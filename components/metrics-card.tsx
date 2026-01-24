@@ -9,9 +9,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 interface MetricsCardProps {
   title: string
   value: string | number
-  description: string
+  description?: string
   chartData?: Array<{ name: string; value: number }>
-  type?: "bar" | "text"
+  type?: "bar" | "text" | "chart"
 }
 
 export function MetricsCard({ title, value, description, chartData, type = "text" }: MetricsCardProps) {

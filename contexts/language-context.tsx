@@ -117,6 +117,13 @@ const translations: Translations = {
   "metrics.pos": { en: "POS Distribution", he: "התפלגות מרכיבי השפה" },
   "metrics.turn_distribution": { en: "Turn Distribution", he: "מספר חילופי התורות" },
   "metrics.initiation_ratio": { en: "Initiation Ratio", he: "שיעור פתיחת אינטראקציות" },
+  "metrics.average_gap": { en: "Average Gap", he: "מרווח זמן ממוצע" },
+  "metrics.fluency_score": { en: "Fluency Score", he: "מדד שטף" },
+  "categories.General": { en: "General", he: "כללי" },
+  "categories.Interaction": { en: "Interaction", he: "אינטראקציה" },
+  "categories.Vocabulary": { en: "Vocabulary", he: "אוצר מילים" },
+  "categories.Syntax": { en: "Syntax", he: "תחביר" },
+  "categories.Fluency": { en: "Fluency", he: "שטף" },
 }
 
 export interface LanguageContextType {

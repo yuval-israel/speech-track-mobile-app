@@ -40,6 +40,10 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
 
         if (response.status === 401) {
             console.warn(`401 Unauthorized from ${url}`);
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('access_token');
+                window.location.reload();
+            }
             throw new Error('Unauthorized');
         }
 

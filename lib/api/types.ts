@@ -111,6 +111,14 @@ export interface InteractionAnalysis {
   total_floor_time: Record<string, number>;
 }
 
+export interface InteractionAggregates {
+  total_turns_count: number;
+  average_turns_per_session: number;
+  total_initiations_child: number;
+  average_initiations_per_session: number;
+  average_gap_duration: number;
+}
+
 export interface RecordingAnalysisOut {
   schema_version: string;
   session_id: string;
@@ -135,6 +143,7 @@ export interface ChildAggregates {
   total_utterances: number;
   pos_distribution: Record<string, number>;
   global_mlu_words: number;
+  interaction?: InteractionAggregates | null;
 }
 
 export interface ChildGlobalAnalysisOut {
@@ -177,6 +186,7 @@ export interface Analysis {
   vocabulary_diversity: number; // For DataView but maybe optional?
   created_at?: string;
   interaction_analysis?: InteractionAnalysis;
+  interaction_aggregates?: InteractionAggregates;
   ttr: number;
 }
 
@@ -209,6 +219,7 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
   let mlu = 0;
   let ttr = 0;
   let interaction_analysis: InteractionAnalysis | undefined = undefined;
+  let interaction_aggregates: InteractionAggregates | undefined = undefined;
 
   if ('counts' in data) {
     // RecordingAnalysisOut
@@ -225,6 +236,7 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     pos_counts = data.aggregates.pos_distribution;
     mlu = data.aggregates.global_mlu_words;
     ttr = (data as any).aggregates.global_ttr_surface || 0;
+    interaction_aggregates = data.aggregates.interaction ?? undefined;
   }
 
   // Calculate percentages for POS
@@ -245,8 +257,8 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     fluency_score: 0, // Mock
     vocabulary_diversity: 0, // Mock
     interaction_analysis,
+    interaction_aggregates,
     ttr,
-    // id, child_id etc are missing from AnalysisOut, added as optional in interface
   };
 }
 // ... (existing code)

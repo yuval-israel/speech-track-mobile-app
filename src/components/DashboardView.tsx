@@ -18,8 +18,8 @@ export interface DashboardViewProps {
   user: User
   children: Child[]
   currentChild: Child
-  analysis: Analysis | null
-  weeklyProgress: Array<{ date: string; mlu: number; tokens: number }>
+  lastSession: Analysis | null
+  total: Analysis | null
   missedRecordings: Array<{ routine: string; scheduled_time: string }>
   routines: ScheduledRoutine[]
   onSwitchChild: (childId: string) => void
@@ -33,8 +33,8 @@ export function DashboardView({
   user,
   children,
   currentChild,
-  analysis,
-  weeklyProgress,
+  lastSession,
+  total,
   missedRecordings,
   routines,
   onSwitchChild,
@@ -75,8 +75,8 @@ export function DashboardView({
         <HomeView
           user={user}
           currentChild={currentChild || null}
-          analysis={analysis}
-          weeklyProgress={weeklyProgress}
+          lastSession={lastSession}
+          total={total}
           missedRecordings={missedRecordings}
           onOpenRecording={() => { }}
           onLogout={onLogout}

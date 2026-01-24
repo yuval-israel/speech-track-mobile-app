@@ -57,8 +57,8 @@ export interface DashboardData {
   user: User
   children: Child[]
   currentChild: Child
-  latestAnalysis: Analysis | null
-  weeklyProgress: Array<{ date: string; mlu: number; tokens: number }>
+  lastSession: Analysis | null
+  total: Analysis | null
   missedRecordings: Array<{ routine: string; scheduled_time: string }>
   routines: ScheduledRoutine[]
 }

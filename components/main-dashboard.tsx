@@ -2,13 +2,12 @@
 
 import { useState } from "react"
 import { VoiceStampFlow } from "./voice-stamp-flow"
-import { LanguageAnalysis } from "./language-analysis"
 import { FamilyView } from "./family-view"
 import { AlertsView } from "./alerts-view"
 import { BottomNav } from "./bottom-nav"
 import { HomeDashboard } from "./home-dashboard"
 
-type TabType = "home" | "family" | "record" | "data" | "alerts"
+type TabType = "home" | "family" | "record" | "alerts"
 
 interface MainDashboardProps {
   onLogout?: () => void
@@ -30,7 +29,6 @@ export function MainDashboard({ onLogout }: MainDashboardProps) {
       )}
       {activeTab === "family" && <FamilyView />}
       {activeTab === "record" && <VoiceStampFlow />}
-      {activeTab === "data" && <LanguageAnalysis />}
       {activeTab === "alerts" && <AlertsView />}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
