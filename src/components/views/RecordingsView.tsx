@@ -1,33 +1,73 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { Play, Download, Trash2, FileAudio, Calendar, Clock, RefreshCw } from "lucide-react"
+import { Play, Download, Trash2, FileAudio, Calendar, Clock, RefreshCw, Pencil, Check, X } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Input } from "@/components/ui/input"
 import { useRecordings } from "@/src/hooks/useRecordings"
 import type { Child } from "@/lib/api/types"
 import { apiBaseUrl } from "@/lib/api/client"
+import { useLanguage } from "@/contexts/language-context"
 
 interface RecordingsViewProps {
     currentChild: Child
 }
 
 export function RecordingsView({ currentChild }: RecordingsViewProps) {
-    const { recordings, isLoading, error, deleteRecording } = useRecordings(
+    const { recordings, isLoading, error, deleteRecording, refreshRecordings } = useRecordings(
         currentChild ? parseInt(currentChild.id) : undefined
     )
     const [playingId, setPlayingId] = useState<number | null>(null)
     const [retranscribingId, setRetranscribingId] = useState<number | null>(null)
+    const [editingId, setEditingId] = useState<number | null>(null)
+    const [editName, setEditName] = useState("")
+
+    const { t } = useLanguage()
 
     const handlePlay = (id: number) => {
         setPlayingId(playingId === id ? null : id)
     }
 
+    const startEditing = (id: number, currentName: string) => {
+        setEditingId(id)
+        setEditName(currentName)
+    }
+
+    const cancelEditing = () => {
+        setEditingId(null)
+        setEditName("")
+    }
+
+    const saveRename = async (id: number) => {
+        if (!editName.trim()) return
+
+        const token = localStorage.getItem("access_token")
+        if (!token) return
+
+        try {
+            await fetch(`${apiBaseUrl}/recordings/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: editName })
+            })
+            toast.success(t("recordings.renamed"))
+            setEditingId(null)
+            refreshRecordings()
+        } catch (err) {
+            toast.error(t("recordings.rename_failed"))
+            console.error(err)
+        }
+    }
+
     const handleDownload = async (id: number, filename: string) => {
         const token = localStorage.getItem("access_token")
         if (!token) {
-            toast.error("You must be logged in to download recordings.")
+            toast.error(t("recordings.download_login_error"))
             return
         }
 
@@ -42,7 +82,7 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
 
             if (!response.ok) {
                 console.error("Download failed with status:", response.status)
-                toast.error("Failed to download recording. It may not exist.")
+                toast.error(t("recordings.download_failed"))
                 return
             }
 
@@ -55,15 +95,15 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
             a.click()
             a.remove()
             window.URL.revokeObjectURL(url)
-            toast.success("Download started")
+            toast.success(t("recordings.download_start"))
         } catch (err) {
             console.error("Download failed", err)
-            toast.error("An error occurred while downloading.")
+            toast.error(t("recordings.error_download"))
         }
     }
 
     const handleDelete = async (id: number) => {
-        if (window.confirm("Are you sure you want to delete this recording?")) {
+        if (window.confirm(t("recordings.delete_confirm"))) {
             await deleteRecording(id)
         }
     }
@@ -71,11 +111,11 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
     const handleRetranscribe = async (id: number) => {
         const token = localStorage.getItem("access_token")
         if (!token) {
-            toast.error("You must be logged in to retranscribe recordings.")
+            toast.error(t("recordings.retranscribe_login_error"))
             return
         }
 
-        if (!window.confirm("Are you sure you want to retranscribe this recording? This will replace the existing transcription.")) {
+        if (!window.confirm(t("recordings.retranscribe_confirm"))) {
             return
         }
 
@@ -90,15 +130,15 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
 
             if (!response.ok) {
                 console.error("Retranscribe failed with status:", response.status)
-                toast.error("Failed to retranscribe recording.")
+                toast.error(t("recordings.error_retranscribe"))
                 return
             }
 
-            toast.success("Recording is being retranscribed...")
+            toast.success(t("recordings.retranscribe_started"))
             // The recording status should update automatically via polling/refresh
         } catch (err) {
             console.error("Retranscribe failed", err)
-            toast.error("An error occurred while retranscribing.")
+            toast.error(t("recordings.error_retranscribe"))
         } finally {
             setRetranscribingId(null)
         }
@@ -126,9 +166,9 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
                 <div className="bg-slate-100 p-4 rounded-full mb-4">
                     <FileAudio className="h-8 w-8 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-medium text-slate-900 mb-1">No recordings yet</h3>
+                <h3 className="text-lg font-medium text-slate-900 mb-1">{t("recordings.empty")}</h3>
                 <p className="text-sm text-slate-500">
-                    Start recording to track {currentChild?.name || 'your child'}'s speech progress.
+                    {t("recordings.track_progress")} {currentChild?.name || t("recordings.your_child")}'s speech progress.
                 </p>
             </div >
         )
@@ -137,20 +177,45 @@ export function RecordingsView({ currentChild }: RecordingsViewProps) {
     return (
         <ScrollArea className="h-[calc(100vh-8rem)] px-4 py-6">
             <div className="space-y-4 pb-24">
-                <h2 className="text-2xl font-bold tracking-tight mb-4">Recordings</h2>
+                <h2 className="text-2xl font-bold tracking-tight mb-4">{t("recordings.title")}</h2>
 
                 {recordings.map((recording) => (
                     <Card key={recording.id} className="overflow-hidden bg-white/50 backdrop-blur-sm">
                         <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-start gap-3 flex-1">
                                     <div className="bg-primary/10 p-2 rounded-lg mt-1">
                                         <FileAudio className="h-5 w-5 text-primary" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium text-slate-900 break-all line-clamp-1">
-                                            {recording.filename}
-                                        </h3>
+                                    <div className="flex-1 min-w-0">
+                                        {editingId === recording.id ? (
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Input
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    className="h-8 text-sm"
+                                                    autoFocus
+                                                />
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => saveRename(recording.id)}>
+                                                    <Check className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={cancelEditing}>
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group">
+                                                <h3 className="font-medium text-slate-900 break-all line-clamp-1">
+                                                    {recording.name || recording.filename}
+                                                </h3>
+                                                <button
+                                                    onClick={() => startEditing(recording.id, recording.name || recording.filename)}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-primary"
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-500">
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />

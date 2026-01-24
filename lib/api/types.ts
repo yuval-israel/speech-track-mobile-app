@@ -49,6 +49,7 @@ export interface TranscriptionOut {
 export interface RecordingOut {
   id: number;
   filename: string;
+  name?: string | null;
   created_at: string;
   child_id: number;
   child: ChildOut;

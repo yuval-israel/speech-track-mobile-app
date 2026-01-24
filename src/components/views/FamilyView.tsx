@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
+import { useLanguage } from "@/contexts/language-context"
 
 interface FamilyViewProps {
   children: Child[]
@@ -19,6 +20,7 @@ interface FamilyViewProps {
 }
 
 export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, onRefresh }: FamilyViewProps) {
+  const { t } = useLanguage()
   // Mock parent data (since we don't have a list of parents from props yet)
   const parents = [
     { id: "parent-1", name: "You", isCurrentUser: true }
@@ -29,7 +31,7 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
 
       {/* Parents Section */}
       <section>
-        <h2 className="text-xl font-bold mb-4">Parents</h2>
+        <h2 className="text-xl font-bold mb-4">{t("family.parents")}</h2>
         <div className="space-y-3">
           {parents.map((parent) => (
             <Card key={parent.id} className="border-border">
@@ -53,7 +55,7 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
 
       {/* Children Section */}
       < section >
-        <h2 className="text-xl font-bold mb-4">Children</h2>
+        <h2 className="text-xl font-bold mb-4">{t("family.children")}</h2>
         <div className="space-y-3">
           {children.map((child) => {
             const isActive = child.id === currentChild?.id
@@ -70,7 +72,7 @@ export function FamilyView({ children, currentChild, onSwitchChild, onAddChild, 
                   </Avatar>
                   <div className="flex-1 text-left">
                     <p className="font-medium">{child.name}</p>
-                    <p className="text-sm text-muted-foreground">Born: {child.birthdate}</p>
+                    <p className="text-sm text-muted-foreground">{t("family.born")}: {child.birthdate}</p>
                   </div>
                   {isActive && <Check className="h-5 w-5 text-accent" />}
                 </CardContent>
@@ -118,6 +120,7 @@ import { Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [tempAudioFile, setTempAudioFile] = useState<File | null>(null)
@@ -140,7 +143,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
       if (file.type.startsWith("audio/")) {
         setTempAudioFile(file)
         setRecordingState('recorded')
-        toast.success("Audio file selected")
+        toast.success(t("family.audio_selected"))
       } else {
         toast.error("Please upload an audio file")
       }
@@ -180,16 +183,16 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
       mediaRecorder.start()
       setRecordingState('recording')
 
-      // Auto-stop after 5 seconds
+      // Auto-stop after 60 seconds (1 minute)
       setTimeout(() => {
         if (mediaRecorder.state !== "inactive") {
           mediaRecorder.stop()
         }
-      }, 5000)
+      }, 60000)
 
     } catch (err) {
       console.error("Microphone permission denied", err)
-      toast.error("Microphone permission denied")
+      toast.error(t("family.mic_denied"))
     }
   }
 
@@ -245,7 +248,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
           method: 'POST',
           body: formData
         })
-        toast.success("Profile created successfully!")
+        toast.success(t("family.success"))
       } catch (uploadError) {
         console.error("Audio upload failed", uploadError)
         toast.warning("Profile created, but voice stamp upload failed.")
@@ -262,7 +265,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
 
     } catch (error) {
       console.error("Failed to create member", error)
-      toast.error("Failed to create profile. Please check your connection.")
+      toast.error(t("family.error"))
     } finally {
       setIsSaving(false)
     }
@@ -287,19 +290,19 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
             <div className="bg-background p-2 rounded-full border border-dashed">
               <Plus className="h-4 w-4" />
             </div>
-            <span className="text-sm font-medium">{type === "parent" ? "Add Parent" : "Add Child"}</span>
+            <span className="text-sm font-medium">{type === "parent" ? t("family.add_parent") : t("family.add_child")}</span>
           </div>
         </Card>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{type === "parent" ? "Add Parent" : "Add Child"}</DialogTitle>
+          <DialogTitle>{type === "parent" ? t("family.add_parent") : t("family.add_child")}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Input
               id="name"
-              placeholder="Name"
+              placeholder={t("family.name")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSaving}
@@ -311,11 +314,11 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
               <div className="grid grid-cols-2 gap-4">
                 <Select value={gender} onValueChange={setGender} disabled={isSaving}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Gender" />
+                    <SelectValue placeholder={t("family.gender")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Boy</SelectItem>
-                    <SelectItem value="female">Girl</SelectItem>
+                    <SelectItem value="male">{t("family.boy")}</SelectItem>
+                    <SelectItem value="female">{t("family.girl")}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -330,7 +333,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
                       disabled={isSaving}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {birthdate ? format(birthdate, "PPP") : <span>Date of Birth</span>}
+                      {birthdate ? format(birthdate, "PPP") : <span>{t("family.dob")}</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -349,10 +352,10 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
 
           <div className="flex items-center justify-between border rounded-md p-3 bg-muted/20">
             <div className="flex flex-col">
-              <span className="text-sm font-medium">Voice Sample</span>
+              <span className="text-sm font-medium">{t("family.voice_sample")}</span>
               <span className="text-xs text-muted-foreground">
-                {recordingState === 'recording' ? "Recording..." :
-                  recordingState === 'recorded' ? "Recorded" : "5-second sample"}
+                {recordingState === 'recording' ? t("family.recording") :
+                  recordingState === 'recorded' ? t("family.recorded") : t("family.sample_duration")}
               </span>
             </div>
 
@@ -398,7 +401,7 @@ function AddMemberCard({ type, onRefresh }: AddMemberCardProps) {
         </div>
         <DialogFooter>
           <Button onClick={handleSave} disabled={isSaving || !name || !tempAudioFile || (type === 'child' && (!birthdate || !gender))}>
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Create Profile"}
+            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("family.saving")}</> : t("family.create_profile")}
           </Button>
         </DialogFooter>
       </DialogContent>

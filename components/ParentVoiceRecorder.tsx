@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ParentVoiceRecorderProps {
     onComplete: () => void
 }
 
 export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
+    const { t } = useLanguage()
     const [isRecording, setIsRecording] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isPlaying, setIsPlaying] = useState(false)
@@ -31,7 +33,7 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
             if (file.type.startsWith("audio/")) {
                 setAudioBlob(file)
                 setAudioUrl(URL.createObjectURL(file))
-                toast.success("Audio file selected")
+                toast.success(t("family.audio_selected"))
             } else {
                 toast.error("Please upload an audio file")
             }
@@ -71,7 +73,7 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
             setIsRecording(true)
         } catch (err) {
             console.error("Error accessing microphone:", err)
-            toast.error("Could not access microphone")
+            toast.error(t("voice.mic_error"))
         }
     }
 
@@ -120,11 +122,11 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                 body: formData,
             })
 
-            toast.success("Voice profile saved!")
+            toast.success(t("voice.saved"))
             onComplete()
         } catch (error) {
             console.error(error)
-            toast.error("Failed to upload voice profile")
+            toast.error(t("voice.upload_error"))
         } finally {
             setIsUploading(false)
         }
@@ -137,14 +139,14 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                     <Mic className={cn("w-8 h-8 text-slate-400 dark:text-slate-500 transition-colors", isRecording && "text-red-500 animate-pulse")} />
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                    {isRecording ? "Listening..." : audioBlob ? "Review Recording" : "Record Your Voice"}
+                    {isRecording ? t("voice.listening") : audioBlob ? t("voice.review") : t("voice.record_title")}
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
                     {isRecording
-                        ? "Read a simple sentence naturally."
+                        ? t("voice.instruction_record")
                         : audioBlob
-                            ? "Listen to make sure it sounds clear."
-                            : "Read: \"The sun rises in the east, casting golden rays across the morning sky.\""
+                            ? t("voice.instruction_review")
+                            : t("voice.instruction_record")
                     }
                 </p>
             </div>
@@ -160,11 +162,11 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                         >
                             {isRecording ? (
                                 <>
-                                    <Square className="w-4 h-4 mr-2" /> Stop Recording
+                                    <Square className="w-4 h-4 mr-2" /> {t("voice.stop_recording")}
                                 </>
                             ) : (
                                 <>
-                                    <Mic className="w-4 h-4 mr-2" /> Start Recording
+                                    <Mic className="w-4 h-4 mr-2" /> {t("voice.start_recording")}
                                 </>
                             )}
                         </Button>
@@ -174,7 +176,7 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                                 <span className="w-full border-t border-slate-200 dark:border-slate-800" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-white dark:bg-slate-950 px-2 text-slate-500">Or</span>
+                                <span className="bg-white dark:bg-slate-950 px-2 text-slate-500">{t("voice.or")}</span>
                             </div>
                         </div>
 
@@ -183,7 +185,7 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                             className="w-full h-12 rounded-full font-medium"
                             onClick={triggerFileInput}
                         >
-                            <Upload className="w-4 h-4 mr-2" /> Upload Audio File
+                            <Upload className="w-4 h-4 mr-2" /> {t("voice.upload_file")}
                         </Button>
 
                         <input
@@ -205,11 +207,11 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                             >
                                 {isPlaying ? (
                                     <>
-                                        <Square className="w-4 h-4 mr-2" /> Stop
+                                        <Square className="w-4 h-4 mr-2" /> {t("voice.stop")}
                                     </>
                                 ) : (
                                     <>
-                                        <Play className="w-4 h-4 mr-2" /> Play
+                                        <Play className="w-4 h-4 mr-2" /> {t("voice.play")}
                                     </>
                                 )}
                             </Button>
@@ -232,7 +234,7 @@ export function ParentVoiceRecorder({ onComplete }: ParentVoiceRecorderProps) {
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                                 <>
-                                    <Save className="w-4 h-4 mr-2" /> Save Voice Profile
+                                    <Save className="w-4 h-4 mr-2" /> {t("voice.save_profile")}
                                 </>
                             )}
                         </Button>

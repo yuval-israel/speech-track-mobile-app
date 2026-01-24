@@ -1,4 +1,4 @@
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const apiBaseUrl = "http://localhost:8000";
 
 type RequestOptions = RequestInit & {
     headers?: Record<string, string>;
@@ -6,7 +6,12 @@ type RequestOptions = RequestInit & {
 
 export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const url = `${apiBaseUrl}${endpoint}`;
-    console.log(`[API Request] Fetching: ${url}`);
+    console.log(`[API Request] Fetching: ${url}`, {
+        endpoint,
+        baseUrl: apiBaseUrl,
+        options,
+        fullConfig: { ...options, headers: { ...options.headers } }
+    });
 
     const headers: Record<string, string> = {
         ...options.headers,
@@ -59,7 +64,11 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
 
         return response.json();
     } catch (error) {
-        console.error(`[API Error] Failed to fetch ${url}`, error);
+        console.error(`[API Error] Failed to fetch ${url}`, {
+            error,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            cause: error instanceof Error ? error.cause : undefined
+        });
         throw error;
     }
 }

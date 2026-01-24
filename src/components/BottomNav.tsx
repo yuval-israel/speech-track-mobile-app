@@ -1,4 +1,5 @@
 "use client"
+import { useLanguage } from "@/contexts/language-context"
 
 import { Home, Users, FileAudio, Bell, Settings } from "lucide-react"
 
@@ -10,12 +11,14 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const { t } = useLanguage()
+
   const tabs = [
-    { id: "home" as TabType, icon: Home, label: "Home" },
-    { id: "family" as TabType, icon: Users, label: "Family" },
-    { id: "records" as TabType, icon: FileAudio, label: "Records" },
-    { id: "alerts" as TabType, icon: Bell, label: "Alerts" },
-    { id: "settings" as TabType, icon: Settings, label: "Settings" },
+    { id: "home" as TabType, icon: Home, label: t("nav.home") },
+    { id: "family" as TabType, icon: Users, label: t("nav.family") },
+    { id: "records" as TabType, icon: FileAudio, label: t("nav.recordings") },
+    { id: "alerts" as TabType, icon: Bell, label: t("nav.alerts") },
+    { id: "settings" as TabType, icon: Settings, label: t("nav.settings") },
   ]
 
   return (

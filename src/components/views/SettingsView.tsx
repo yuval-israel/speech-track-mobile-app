@@ -13,6 +13,8 @@ import { ParentVoiceRecorder } from "@/components/ParentVoiceRecorder"
 import { apiFetch } from "@/lib/api/client"
 import { toast } from "sonner"
 
+import { useLanguage } from "@/contexts/language-context"
+
 interface SettingsViewProps {
     user: User
     currentChild: Child | null
@@ -22,6 +24,7 @@ interface SettingsViewProps {
 
 export function SettingsView({ user, currentChild, onLogout, onRefresh }: SettingsViewProps) {
     const { theme, setTheme } = useTheme()
+    const { t, language, setLanguage, dir } = useLanguage()
     const [showVoiceSetup, setShowVoiceSetup] = useState(false)
 
     // Family Sharing State
@@ -135,14 +138,41 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
     }
 
     return (
-        <div className="p-4 space-y-6 pb-24">
-            <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
+        <div className="p-4 space-y-6 pb-24" dir={dir}>
+            <h2 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h2>
+
+            {/* Language Section - New */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t("settings.language")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={language === 'en' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setLanguage('en')}
+                            className="w-24"
+                        >
+                            English
+                        </Button>
+                        <Button
+                            variant={language === 'he' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setLanguage('he')}
+                            className="w-24"
+                        >
+                            עברית
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Account Section */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Account</CardTitle>
-                    <CardDescription>Manage your account information</CardDescription>
+                    <CardTitle>{t("settings.account")}</CardTitle>
+                    <CardDescription>{t("settings.account_desc")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-4">
@@ -164,7 +194,7 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                     <div className="pt-2">
                         <Button variant="destructive" className="w-full sm:w-auto" onClick={onLogout}>
                             <LogOut className="h-4 w-4 mr-2" />
-                            Sign Out
+                            {t("settings.sign_out")}
                         </Button>
                     </div>
                 </CardContent>
@@ -205,9 +235,9 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
             {/* Voice Profile Section */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Parent Voice Profile</CardTitle>
+                    <CardTitle>{t("settings.voice_profile")}</CardTitle>
                     <CardDescription>
-                        This helps us identify you as "Speaker 1" (Mom/Dad) during recordings.
+                        {t("settings.voice_desc")}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -217,29 +247,29 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                 <Mic className={`w-5 h-5 ${user.has_voice_profile ? 'text-green-600' : 'text-red-600'}`} />
                             </div>
                             <div>
-                                <div className="font-medium text-sm">My Voice Profile</div>
+                                <div className="font-medium text-sm">{t("settings.my_voice")}</div>
                                 <div className={`text-xs flex items-center gap-1 ${user.has_voice_profile ? 'text-green-600' : 'text-red-500'}`}>
                                     {user.has_voice_profile ? (
                                         <>
-                                            <CheckCircle className="w-3 h-3" /> Recorded
+                                            <CheckCircle className="w-3 h-3" /> {t("family.recorded")}
                                         </>
                                     ) : (
                                         <>
-                                            <AlertCircle className="w-3 h-3" /> Missing
+                                            <AlertCircle className="w-3 h-3" /> {t("settings.missing")}
                                         </>
                                     )}
                                 </div>
                             </div>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => setShowVoiceSetup(true)}>
-                            {user.has_voice_profile ? "Re-record" : "Record Now"}
+                            {user.has_voice_profile ? t("settings.re_record") : t("settings.record_now")}
                         </Button>
                         <Dialog open={showVoiceSetup} onOpenChange={setShowVoiceSetup}>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Parent Voice Profile</DialogTitle>
+                                    <DialogTitle>{t("settings.voice_profile")}</DialogTitle>
                                     <DialogDescription>
-                                        Record your voice so we can distinguish you from your child.
+                                        {t("settings.voice_desc")}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <ParentVoiceRecorder onComplete={handleVoiceSetupComplete} />
@@ -368,14 +398,14 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
             {/* Appearance Section */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Appearance</CardTitle>
-                    <CardDescription>Customize how the app looks on your device</CardDescription>
+                    <CardTitle>{t("settings.appearance")}</CardTitle>
+                    <CardDescription>{t("settings.appearance_desc")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Moon className="h-4 w-4 text-slate-500" />
-                            <span className="font-medium">Dark Mode</span>
+                            <span className="font-medium">{t("settings.dark_mode")}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
@@ -384,7 +414,7 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                 onClick={() => setTheme('light')}
                                 className="rounded-full px-3"
                             >
-                                <Sun className="h-4 w-4 mr-1" /> Light
+                                <Sun className="h-4 w-4 mr-1" /> {t("settings.light")}
                             </Button>
                             <Button
                                 variant={theme === 'dark' ? 'default' : 'outline'}
@@ -392,7 +422,7 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                 onClick={() => setTheme('dark')}
                                 className="rounded-full px-3"
                             >
-                                <Moon className="h-4 w-4 mr-1" /> Dark
+                                <Moon className="h-4 w-4 mr-1" /> {t("settings.dark")}
                             </Button>
                             <Button
                                 variant={theme === 'system' ? 'default' : 'outline'}
@@ -400,7 +430,7 @@ export function SettingsView({ user, currentChild, onLogout, onRefresh }: Settin
                                 onClick={() => setTheme('system')}
                                 className="rounded-full px-3"
                             >
-                                <Monitor className="h-4 w-4 mr-1" /> System
+                                <Monitor className="h-4 w-4 mr-1" /> {t("settings.system")}
                             </Button>
                         </div>
                     </div>
