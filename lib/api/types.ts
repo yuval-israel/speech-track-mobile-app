@@ -145,7 +145,9 @@ export interface ChildAggregates {
   total_utterances: number;
   pos_distribution: Record<string, number>;
   global_mlu_words: number;
+  articulation_wpm?: number;
   interaction?: InteractionAggregates | null;
+  interaction_analysis?: InteractionAnalysis | null;
 }
 
 export interface ChildGlobalAnalysisOut {
@@ -192,6 +194,7 @@ export interface Analysis {
   interaction_analysis?: InteractionAnalysis;
   interaction_aggregates?: InteractionAggregates;
   ttr: number;
+  speech?: SpeechMetrics;
 }
 
 // Adapters
@@ -224,6 +227,7 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
   let ttr = 0;
   let interaction_analysis: InteractionAnalysis | undefined = undefined;
   let interaction_aggregates: InteractionAggregates | undefined = undefined;
+  let speech: SpeechMetrics | undefined = undefined;
 
   if ('counts' in data) {
     // RecordingAnalysisOut
@@ -233,6 +237,7 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     mlu = data.mlu.mlu_words;
     ttr = data.lexical_diversity.ttr_surface;
     interaction_analysis = data.interaction_analysis ?? undefined;
+    speech = data.speech;
   } else {
     // ChildGlobalAnalysisOut
     total_tokens = data.aggregates.total_tokens_surface;
@@ -241,6 +246,17 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     mlu = data.aggregates.global_mlu_words;
     ttr = (data as any).aggregates.global_ttr_surface || 0;
     interaction_aggregates = data.aggregates.interaction ?? undefined;
+    interaction_analysis = data.aggregates.interaction_analysis ?? undefined;
+
+    // Map global articulation_wpm to the speech structure
+    if (data.aggregates.articulation_wpm !== undefined) {
+      speech = {
+        total_speech_duration_seconds: data.aggregates.total_speech_duration_seconds,
+        overall_wpm_including_pauses: data.aggregates.articulation_wpm,
+        articulation_wpm_excluding_between_pauses: data.aggregates.articulation_wpm,
+        words_per_second_articulation: (data.aggregates as any).articulation_wps || 0,
+      } as SpeechMetrics;
+    }
   }
 
   // Calculate percentages for POS
@@ -263,6 +279,7 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     interaction_analysis,
     interaction_aggregates,
     ttr,
+    speech,
   };
 }
 // ... (existing code)

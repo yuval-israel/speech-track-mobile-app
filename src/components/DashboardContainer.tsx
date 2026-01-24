@@ -143,8 +143,8 @@ export function DashboardContainer({
       user={dashboardData.user}
       children={dashboardData.children}
       currentChild={currentChild}
-      analysis={dashboardData.latestAnalysis}
-      weeklyProgress={dashboardData.weeklyProgress}
+      lastSession={dashboardData.lastSession}
+      total={dashboardData.total}
       missedRecordings={dashboardData.missedRecordings}
       routines={dashboardData.routines}
       onSwitchChild={handleSwitchChild}

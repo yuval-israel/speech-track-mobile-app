@@ -17,7 +17,6 @@ import {
 
 type Category = 'General' | 'Interaction' | 'Vocabulary' | 'Sentences'
 
-
 interface HomeViewProps {
   user: User
   currentChild: Child | null
@@ -40,7 +39,7 @@ export function HomeView({
   onNavigateToFamily
 }: HomeViewProps) {
   const { t, isRTL } = useLanguage()
-  const [selectedCategory, setSelectedCategory] = useState<Category>('Interaction')
+  const [selectedCategory, setSelectedCategory] = useState<Category>('General')
 
   // Empty State
   if (!currentChild) {
@@ -68,41 +67,42 @@ export function HomeView({
     )
   }
 
+  const renderMetricValue = (analysis: Analysis | null, field: string) => {
+    if (!analysis) return null
 
-  const renderMetricRow = (labelKey: string, valuePath: string, isChart = false, customValue?: (analysis: Analysis | null) => any) => {
-    const getValue = (analysis: Analysis | null) => {
-      if (customValue) return customValue(analysis)
-      if (!analysis) return "N/A"
-      const keys = valuePath.split('.')
-      let val: any = analysis
-      for (const key of keys) {
-        val = val?.[key]
-      }
-      return val ?? "N/A"
+    const childName = currentChild?.name?.toLowerCase() || 'child'
+
+    switch (field) {
+      case 'turns':
+        // If we have local patterns, sum them. Otherwise look at aggregates.
+        if (analysis.interaction_analysis?.turn_taking_patterns) {
+          return analysis.interaction_analysis.turn_taking_patterns.reduce((sum, p) => sum + p.count, 0)
+        }
+        return analysis.interaction_aggregates?.total_turns_count ?? 0
+      case 'initiations':
+        // First try finding by name (case insensitive), then by generic 'child'
+        if (analysis.interaction_analysis?.initiation_rate) {
+          const rates = analysis.interaction_analysis.initiation_rate
+          const key = Object.keys(rates).find(k => k.toLowerCase() === childName) || 'child'
+          return rates[key] ?? 0
+        }
+        return analysis.interaction_aggregates?.total_initiations_child ?? 0
+      case 'tokens':
+        return analysis.total_tokens
+      case 'types':
+        return analysis.unique_tokens
+      case 'mlu':
+        return analysis.mlu?.toFixed(2)
+      case 'wpm':
+        return analysis.speech?.overall_wpm_including_pauses?.toFixed(1) || 0
+      default:
+        return 0
     }
+  }
 
-    const lastVal = getValue(lastSession)
-    const globalVal = getValue(total)
-
-    const formatValue = (v: any) => {
-      if (v === "N/A") return v
-      if (typeof v === 'number') {
-        if (Number.isInteger(v)) return v.toString()
-        return v.toFixed(2)
-      }
-      return v.toString()
-    }
-
-    // Trend calculation
-    let trend: string | undefined = undefined
-    let trendUp: boolean | undefined = undefined
-
-    if (typeof lastVal === 'number' && typeof globalVal === 'number' && globalVal !== 0) {
-      const diff = lastVal - globalVal
-      const percent = (diff / globalVal) * 100
-      trend = `${Math.abs(percent).toFixed(0)}%`
-      trendUp = diff >= 0
-    }
+  const renderMetric = (labelKey: string, field: string) => {
+    const lastVal = renderMetricValue(lastSession, field)
+    const totalVal = renderMetricValue(total, field)
 
     return (
       <div key={labelKey} className="space-y-2">
@@ -110,48 +110,33 @@ export function HomeView({
           {t(labelKey)}
         </label>
         <div className={`grid grid-cols-2 gap-4 ${isRTL ? "rtl" : ""}`}>
-          <MetricsCard
-            title=""
-            value={!isChart ? formatValue(lastVal) : ""}
-            type={isChart ? "chart" : "text"}
-            chartData={isChart ? lastVal : undefined}
-            trend={!isChart ? trend : undefined}
-            trendUp={!isChart ? trendUp : undefined}
-            variant="tinted"
-          />
-          <MetricsCard
-            title=""
-            value={!isChart ? formatValue(globalVal) : ""}
-            type={isChart ? "chart" : "text"}
-            chartData={isChart ? globalVal : undefined}
-          />
+          {/* Right Column: Last Session */}
+          <div className="flex flex-col">
+            {lastSession ? (
+              <MetricsCard
+                title=""
+                value={lastVal !== null ? lastVal : "0"}
+                variant="tinted"
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center bg-muted/30 rounded-2xl border border-dashed border-muted p-4 text-center">
+                <p className="text-xs text-muted-foreground italic">
+                  {isRTL ? "אין הקלטות עדיין" : "No recordings yet"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Left Column: Total */}
+          <div className="flex flex-col">
+            <MetricsCard
+              title=""
+              value={totalVal !== null ? totalVal : "0"}
+            />
+          </div>
         </div>
       </div>
     )
-  }
-
-  const renderTurnCount = (analysis: Analysis | null) => {
-    if (!analysis) return "-"
-    if (analysis.interaction_analysis) {
-      return analysis.interaction_analysis.turn_taking_patterns.reduce((sum, p) => sum + p.count, 0)
-    }
-    return analysis.interaction_aggregates?.total_turns_count ?? "-"
-  }
-
-  const renderInitiationValue = (analysis: Analysis | null) => {
-    if (!analysis) return "-"
-    return analysis.interaction_analysis?.initiation_rate['child']
-      ?? analysis.interaction_aggregates?.total_initiations_child
-      ?? "-"
-  }
-
-  const renderPOSChart = (analysis: Analysis | null) => {
-    if (!analysis?.pos_distribution) return []
-    const data = Object.entries(analysis.pos_distribution).map(([name, value]) => ({
-      name,
-      value
-    }))
-    return data
   }
 
   const renderCategoryContent = () => {
@@ -159,34 +144,33 @@ export function HomeView({
       case 'Interaction':
         return (
           <div className="space-y-6">
-            {renderMetricRow("מספר חילופי התורות", "", false, renderTurnCount)}
-            {renderMetricRow("שיעור פתיחת אינטראקציות", "", false, renderInitiationValue)}
+            {renderMetric("metrics.turn_distribution", 'turns')}
+            {renderMetric("metrics.initiation_ratio", 'initiations')}
           </div>
         )
       case 'Vocabulary':
         return (
           <div className="space-y-6">
-            {renderMetricRow("סך כל יחידות השפה", "total_tokens")}
-            {renderMetricRow("מספר המילים השונות", "unique_tokens")}
-            {renderMetricRow("מדד גיוון המילים", "ttr")}
+            {renderMetric("metrics.total_tokens", 'tokens')}
+            {renderMetric("metrics.unique_words", 'types')}
           </div>
         )
       case 'Sentences':
         return (
           <div className="space-y-6">
-            {renderMetricRow("מספר המילים הממוצע במשפט", "mlu")}
+            {renderMetric("metrics.mlu", 'mlu')}
+            {renderMetric("WPM", 'wpm')}
           </div>
         )
       case 'General':
+      default:
         return (
           <div className="space-y-6">
-            {renderMetricRow("מספר המילים הממוצע במשפט", "mlu")}
-            {renderMetricRow("סך כל יחידות השפה", "total_tokens")}
-            {renderMetricRow("מספר המילים השונות", "unique_tokens")}
+            {renderMetric("metrics.turn_distribution", 'turns')}
+            {renderMetric("metrics.total_tokens", 'tokens')}
+            {renderMetric("metrics.mlu", 'mlu')}
           </div>
         )
-      default:
-        return null
     }
   }
 
@@ -195,19 +179,21 @@ export function HomeView({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Hi, {user.full_name?.split(" ")[0]}
+            {isRTL ? "היי" : "Hi"}, {user.full_name?.split(" ")[0]}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400">Here's how {currentChild.name} is doing</p>
+          <p className="text-slate-500 dark:text-slate-400">
+            {isRTL ? `הנה מה שחדש אצל ${currentChild.name}` : `Here's how ${currentChild.name} is doing`}
+          </p>
         </div>
       </div>
 
       {/* Category Selector */}
       <div className="space-y-2">
         <label className={`text-sm font-medium ${isRTL ? "text-right block w-full" : ""}`}>
-          {isRTL ? "בחר מדד" : "Select Metric"}
+          {isRTL ? "בחר מדד" : "Select Category"}
         </label>
         <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as Category)} dir={isRTL ? "rtl" : "ltr"}>
-          <SelectTrigger className="w-full rounded-xl">
+          <SelectTrigger className="w-full rounded-xl bg-background border-muted shadow-sm hover:bg-accent/5 transition-colors">
             <SelectValue placeholder="Select Category" />
           </SelectTrigger>
           <SelectContent>
@@ -219,28 +205,36 @@ export function HomeView({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        {missedRecordings.map((missed, index) => (
-          <MissedRecordingAlert
-            key={index}
-            routine={missed.routine}
-            scheduledTime={missed.scheduled_time}
-            onRecord={onOpenRecording}
-          />
-        ))}
-      </div>
+      {/* Missed Recordings */}
+      {missedRecordings.length > 0 && (
+        <div className="space-y-2">
+          {missedRecordings.map((missed, index) => (
+            <MissedRecordingAlert
+              key={index}
+              routine={missed.routine}
+              scheduledTime={missed.scheduled_time}
+              onRecord={onOpenRecording}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Split View Header */}
-      <div className={`grid grid-cols-2 gap-4 border-b border-border pb-2 ${isRTL ? "rtl" : ""}`}>
-        <div className="text-center font-semibold text-sm">
-          {isRTL ? "אימון אחרון" : "Last Session"}
+      <div className={`grid grid-cols-2 gap-4 border-b border-muted pb-2 ${isRTL ? "rtl" : ""}`}>
+        <div className="text-center">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            {isRTL ? "אימון אחרון" : "Last Session"}
+          </span>
         </div>
-        <div className="text-center font-semibold text-sm">
-          {isRTL ? "ממוצע / סה״כ" : "Total / Average"}
+        <div className="text-center">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            {isRTL ? "ממוצע / סה״כ" : "Total / Average"}
+          </span>
         </div>
       </div>
 
-      <div className="animate-in fade-in duration-500">
+      {/* Content Area */}
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
         {renderCategoryContent()}
       </div>
 
