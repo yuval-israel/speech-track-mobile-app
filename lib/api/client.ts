@@ -68,11 +68,21 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
 
         return response.json();
     } catch (error) {
-        console.error(`[API Error] Failed to fetch ${url}`, {
-            error,
-            message: error instanceof Error ? error.message : 'Unknown error',
-            cause: error instanceof Error ? error.cause : undefined
-        });
+        // Use warn instead of error for expected cases like 404s
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const isExpectedError = message.toLowerCase().includes('not found') ||
+            message.toLowerCase().includes('no ready recordings') ||
+            message.includes('404');
+
+        if (isExpectedError) {
+            console.warn(`[API] ${url}: ${message}`);
+        } else {
+            console.error(`[API Error] Failed to fetch ${url}`, {
+                error,
+                message,
+                cause: error instanceof Error ? error.cause : undefined
+            });
+        }
         throw error;
     }
 }

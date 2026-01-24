@@ -98,6 +98,8 @@ export function HomeView({
         return analysis.mlu?.toFixed(2)
       case 'wpm':
         return analysis.speech?.overall_wpm_including_pauses?.toFixed(1) || 0
+      case 'questions':
+        return (analysis as any).counts?.question_rate?.toFixed(1) ?? 0
       default:
         return 0
     }
@@ -164,6 +166,7 @@ export function HomeView({
           <div className="space-y-6">
             {renderMetric("metrics.mlu", 'mlu')}
             {renderMetric("WPM", 'wpm')}
+            {renderMetric("metrics.question_rate", 'questions')}
             <POSDistributionChart analysis={lastSession} />
           </div>
         )

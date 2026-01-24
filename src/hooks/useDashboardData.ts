@@ -65,7 +65,7 @@ export function useDashboardData() {
                 const [latestData, globalData] = await Promise.all([
                     apiFetch<RecordingAnalysis>(`/analysis/children/${currentChildId}/latest`).catch(e => {
                         // Handle 404 gracefully - it just means no recordings are ready yet
-                        if (e.message.includes("404") || e.message.includes("not found")) {
+                        if (e.message.includes("404") || e.message.toLowerCase().includes("not found") || e.message.toLowerCase().includes("no ready recordings")) {
                             return null;
                         }
                         console.warn("Latest analysis fetch failed", e);
