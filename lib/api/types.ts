@@ -64,6 +64,8 @@ export interface LexicalCounts {
   types_lemma: number;
   hapax_surface: number;
   hapax_lemma: number;
+  question_count?: number;
+  question_rate?: number;
 }
 
 export interface LexicalDiversity {
@@ -119,6 +121,10 @@ export interface InteractionAggregates {
   average_gap_duration: number;
 }
 
+export interface QualityMetrics {
+  speaker_confidence: Record<string, number>;
+}
+
 export interface RecordingAnalysisOut {
   schema_version: string;
   session_id: string;
@@ -132,6 +138,7 @@ export interface RecordingAnalysisOut {
   vocabulary: any;
   child_name?: string | null;
   interaction_analysis?: InteractionAnalysis | null;
+  quality?: QualityMetrics;
 }
 
 export type RecordingAnalysis = RecordingAnalysisOut;
