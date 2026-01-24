@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useLanguage } from "@/contexts/language-context"
+import type { Analysis } from "@/lib/api/types"
 import {
   PieChart,
   Pie,
@@ -55,9 +56,18 @@ const monthlyData = [
   { week: "Week 4", vocabulary: 195, fluency: 82 },
 ]
 
-export function POSDistributionChart() {
+interface POSDistributionChartProps {
+  analysis?: Analysis | null;
+}
+
+export function POSDistributionChart({ analysis }: POSDistributionChartProps) {
   const { isRTL } = useLanguage()
   const posColors = [COLORS.chart1, COLORS.chart2, COLORS.chart3, COLORS.chart4, COLORS.accent]
+
+  // Use real data from analysis if available, otherwise fall back to hardcoded data
+  const chartData = analysis?.pos_distribution
+    ? Object.entries(analysis.pos_distribution).map(([name, value]) => ({ name, value }))
+    : posData;
 
   return (
     <Card className="rounded-2xl">
@@ -67,8 +77,8 @@ export function POSDistributionChart() {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie data={posData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value">
-              {posData.map((entry, index) => (
+            <Pie data={chartData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value">
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={posColors[index % posColors.length]} />
               ))}
             </Pie>

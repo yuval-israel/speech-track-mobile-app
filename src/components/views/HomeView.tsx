@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { MissedRecordingAlert } from "../MissedRecordingAlert"
 import { Plus } from "lucide-react"
 import { MetricsCard } from "../MetricsCard"
+import { POSDistributionChart } from "@/components/data-visualizations"
 import { useLanguage } from "@/contexts/language-context"
 import {
   Select,
@@ -91,6 +92,8 @@ export function HomeView({
         return analysis.total_tokens
       case 'types':
         return analysis.unique_tokens
+      case 'ttr':
+        return analysis.ttr?.toFixed(2)
       case 'mlu':
         return analysis.mlu?.toFixed(2)
       case 'wpm':
@@ -153,6 +156,7 @@ export function HomeView({
           <div className="space-y-6">
             {renderMetric("metrics.total_tokens", 'tokens')}
             {renderMetric("metrics.unique_words", 'types')}
+            {renderMetric("metrics.ttr", 'ttr')}
           </div>
         )
       case 'Sentences':
@@ -160,6 +164,7 @@ export function HomeView({
           <div className="space-y-6">
             {renderMetric("metrics.mlu", 'mlu')}
             {renderMetric("WPM", 'wpm')}
+            <POSDistributionChart analysis={lastSession} />
           </div>
         )
       case 'General':
