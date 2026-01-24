@@ -1,4 +1,4 @@
-// Backend API TypeScript Interfaces
+import { InteractionAnalysis } from "@/lib/api/types"
 
 export interface User {
   id: string
@@ -32,6 +32,8 @@ export interface Analysis {
   pos_distribution: POSDistribution
   vocabulary_diversity: number
   created_at?: string
+  interaction_analysis?: InteractionAnalysis
+  ttr: number
 }
 
 export interface Recording {

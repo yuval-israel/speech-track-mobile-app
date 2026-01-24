@@ -8,6 +8,8 @@ import { GaugeChart } from "../GaugeChart"
 import { MissedRecordingAlert } from "../MissedRecordingAlert"
 import { ProfileSettings } from "../ProfileSettings"
 import { Plus, MessageSquare, Heart } from "lucide-react"
+import { MetricsCard } from "../MetricsCard"
+import { useLanguage } from "@/contexts/language-context"
 
 // Recharts imports for the graph
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell } from "recharts"
@@ -33,6 +35,7 @@ export function HomeView({
   onLogout,
   onNavigateToFamily
 }: HomeViewProps) {
+  const { t, isRTL } = useLanguage()
 
   // Empty State
   if (!currentChild) {
@@ -67,6 +70,10 @@ export function HomeView({
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
+  // Calculate Interaction Metrics
+  const turnExchanges = analysis?.interaction_analysis?.turn_taking_patterns.reduce((sum, p) => sum + p.count, 0) || 0
+  const initiationCount = analysis?.interaction_analysis?.initiation_rate['child'] || 0
+
   return (
     <div className="p-4 space-y-6 pb-24">
       <div className="flex items-center justify-between">
@@ -92,13 +99,36 @@ export function HomeView({
 
       <div className="space-y-6">
         <GaugeChart
-          label="Sentences (MLU)"
+          label={t("metrics.mlu")}
           value={analysis?.mlu || 0}
           max={5.0}
           color="#0ea5e9" // Sky 500
           subtext={analysis?.mlu ? "Your child is on track for their age group." : "No data available yet."}
           icon={<MessageSquare className="h-5 w-5" />}
         />
+
+        <div className="grid grid-cols-2 gap-4">
+          <MetricsCard
+            title={t("metrics.total_tokens")}
+            value={(analysis?.total_tokens || 0).toString()}
+          />
+          <MetricsCard
+            title={t("metrics.unique_words")}
+            value={(analysis?.unique_tokens || 0).toString()}
+          />
+          <MetricsCard
+            title={t("metrics.turn_distribution")}
+            value={turnExchanges.toString()}
+          />
+          <MetricsCard
+            title={t("metrics.initiation_ratio")}
+            value={initiationCount.toString()}
+          />
+          <MetricsCard
+            title={t("metrics.ttr")}
+            value={(analysis?.ttr || 0).toFixed(2)}
+          />
+        </div>
 
         <GaugeChart
           label="Interaction & Fluency"
@@ -138,8 +168,8 @@ export function HomeView({
       {/* Weekly Progress Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Progress</CardTitle>
-          <CardDescription>MLU Tracking over time</CardDescription>
+          <CardTitle className={isRTL ? "text-right" : ""}>{t("nav.home")} - Weekly Progress</CardTitle>
+          <CardDescription className={isRTL ? "text-right" : ""}>{t("metrics.mlu")} Tracking over time</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[200px] w-full">
@@ -182,8 +212,8 @@ export function HomeView({
       {posData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Speech Composition</CardTitle>
-            <CardDescription>Distribution by Part of Speech</CardDescription>
+            <CardTitle className={isRTL ? "text-right" : ""}>{t("metrics.pos")}</CardTitle>
+            <CardDescription className={isRTL ? "text-right" : ""}>Distribution by Part of Speech</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] w-full">

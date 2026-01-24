@@ -108,6 +108,15 @@ const translations: Translations = {
   "settings.light": { en: "Light", he: "בהיר" },
   "settings.dark": { en: "Dark", he: "כהה" },
   "settings.system": { en: "System", he: "מערכת" },
+
+  // Metrics
+  "metrics.total_tokens": { en: "Total Tokens", he: "סך כל יחידות השפה" },
+  "metrics.unique_words": { en: "Unique Words", he: "מספר המילים השונות" },
+  "metrics.ttr": { en: "TTR", he: "מדד גיוון המילים" },
+  "metrics.mlu": { en: "MLU", he: "מספר המילים הממוצע במשפט" },
+  "metrics.pos": { en: "POS Distribution", he: "התפלגות מרכיבי השפה" },
+  "metrics.turn_distribution": { en: "Turn Distribution", he: "מספר חילופי התורות" },
+  "metrics.initiation_ratio": { en: "Initiation Ratio", he: "שיעור פתיחת אינטראקציות" },
 }
 
 export interface LanguageContextType {
@@ -115,6 +124,7 @@ export interface LanguageContextType {
   setLanguage: (lang: Language) => void
   t: (key: string) => string
   dir: "ltr" | "rtl"
+  isRTL: boolean
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
@@ -131,8 +141,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }
 
   const dir: "ltr" | "rtl" = language === "he" ? "rtl" : "ltr"
+  const isRTL = language === "he"
 
-  const value = { language, setLanguage, t, dir }
+  const value = { language, setLanguage, t, dir, isRTL }
 
   return (
     <LanguageContext.Provider value={value}>

@@ -66,10 +66,18 @@ export interface LexicalCounts {
   hapax_lemma: number;
 }
 
-export interface InitialLexicalDiversity { // Part of LexicalDiversity
+export interface LexicalDiversity {
   ttr_surface: number;
   ttr_lemma: number;
-  // Add other fields if needed
+  mattr_surface: number;
+  mattr_window: number;
+  mattr_lemma: number;
+  mtld_surface: number;
+  mtld_threshold: number;
+  mtld_lemma: number;
+  hd_d_surface: number;
+  hd_d_sample_size: number;
+  hd_d_lemma: number;
 }
 
 export interface MLUMetrics {
@@ -84,11 +92,30 @@ export interface SpeechMetrics {
   words_per_second_articulation: number;
 }
 
+export interface ParticipationStats {
+  count: number;
+  percentage: number;
+}
+
+export interface TurnTakingStats {
+  pair: string;
+  count: number;
+}
+
+export interface InteractionAnalysis {
+  participation_rates: Record<string, ParticipationStats>;
+  turn_taking_patterns: TurnTakingStats[];
+  average_interactional_gap: number;
+  dominance_ratio: number;
+  initiation_rate: Record<string, number>;
+  total_floor_time: Record<string, number>;
+}
+
 export interface RecordingAnalysisOut {
   schema_version: string;
   session_id: string;
   counts: LexicalCounts;
-  lexical_diversity: any; // Simplified for now
+  lexical_diversity: LexicalDiversity;
   mlu: MLUMetrics;
   speech: SpeechMetrics;
   syntax: any;
@@ -96,6 +123,7 @@ export interface RecordingAnalysisOut {
   morph_distributions: any;
   vocabulary: any;
   child_name?: string | null;
+  interaction_analysis?: InteractionAnalysis | null;
 }
 
 export interface ChildAggregates {
@@ -148,6 +176,8 @@ export interface Analysis {
   pos_distribution: POSDistribution;
   vocabulary_diversity: number; // For DataView but maybe optional?
   created_at?: string;
+  interaction_analysis?: InteractionAnalysis;
+  ttr: number;
 }
 
 // Adapters
@@ -177,7 +207,8 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
   let unique_tokens = 0;
   let pos_counts: Record<string, number> = {};
   let mlu = 0;
-  let vocabulary_diversity = 0; // Simplified
+  let ttr = 0;
+  let interaction_analysis: InteractionAnalysis | undefined = undefined;
 
   if ('counts' in data) {
     // RecordingAnalysisOut
@@ -185,13 +216,15 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     unique_tokens = data.counts.types_surface;
     pos_counts = data.pos_distribution;
     mlu = data.mlu.mlu_words;
-    // vocabulary_diversity = data.lexical_diversity... // TODO depending on metrics
+    ttr = data.lexical_diversity.ttr_surface;
+    interaction_analysis = data.interaction_analysis ?? undefined;
   } else {
     // ChildGlobalAnalysisOut
     total_tokens = data.aggregates.total_tokens_surface;
     unique_tokens = data.aggregates.total_types_surface;
     pos_counts = data.aggregates.pos_distribution;
     mlu = data.aggregates.global_mlu_words;
+    ttr = (data as any).aggregates.global_ttr_surface || 0;
   }
 
   // Calculate percentages for POS
@@ -211,6 +244,8 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     mlu,
     fluency_score: 0, // Mock
     vocabulary_diversity: 0, // Mock
+    interaction_analysis,
+    ttr,
     // id, child_id etc are missing from AnalysisOut, added as optional in interface
   };
 }
