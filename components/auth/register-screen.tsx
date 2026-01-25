@@ -63,12 +63,13 @@ export function RegisterScreen({ onSuccess, onLoginClick }: RegisterScreenProps)
             formData.append('username', username);
             formData.append('password', password);
 
-            const data = await apiFetch<{ access_token: string }>('/auth/token', {
+            const data = await apiFetch<{ access_token: string; refresh_token: string }>('/auth/token', {
                 method: 'POST',
                 body: formData,
             });
 
             localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
 
             // 3. Immediately go to Dashboard (Skipping Voice Setup)
             onSuccess()

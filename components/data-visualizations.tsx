@@ -64,10 +64,35 @@ export function POSDistributionChart({ analysis }: POSDistributionChartProps) {
   const { isRTL } = useLanguage()
   const posColors = [COLORS.chart1, COLORS.chart2, COLORS.chart3, COLORS.chart4, COLORS.accent]
 
+  const posTranslations: Record<string, { en: string; he: string }> = {
+    NOUN: { en: "Noun", he: "שם עצם" },
+    VERB: { en: "Verb", he: "פועל" },
+    ADJ: { en: "Adjective", he: "שם תואר" },
+    ADV: { en: "Adverb", he: "תואר הפועל" },
+    PRON: { en: "Pronoun", he: "כינוי גוף" },
+    DET: { en: "Determiner", he: "מיידע" },
+    ADP: { en: "Preposition", he: "מילת יחס" },
+    NUM: { en: "Number", he: "מספר" },
+    CONJ: { en: "Conjunction", he: "מילת חיבור" },
+    CCONJ: { en: "Conjunction", he: "מילת חיבור" },
+    SCONJ: { en: "Conjunction", he: "מילת חיבור" },
+    INTJ: { en: "Interjection", he: "מילת קריאה" },
+    PROPN: { en: "Proper Noun", he: "שם פרטי" },
+    AUX: { en: "Auxiliary", he: "פועל עזר" },
+    PART: { en: "Particle", he: "מילית" },
+    SYM: { en: "Symbol", he: "סמל" },
+    PUNCT: { en: "Punctuation", he: "פיסוק" },
+    X: { en: "Other", he: "אחר" },
+  }
+
   // Use real data from analysis if available, otherwise fall back to hardcoded data
   const chartData = analysis?.pos_distribution
-    ? Object.entries(analysis.pos_distribution).map(([name, value]) => ({ name, value }))
-    : posData;
+    ? Object.entries(analysis.pos_distribution).map(([key, value]) => {
+      const upperKey = key.toUpperCase();
+      const label = posTranslations[upperKey] ? (isRTL ? posTranslations[upperKey].he : posTranslations[upperKey].en) : key;
+      return { name: label, value }
+    })
+    : posData.map(d => ({ ...d, name: isRTL && posTranslations[d.name.toUpperCase()]?.he || d.name }));
 
   return (
     <Card className="rounded-2xl">

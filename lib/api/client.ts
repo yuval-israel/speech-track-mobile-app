@@ -1,8 +1,80 @@
-export const apiBaseUrl = "http://localhost:8000";
+// Use environment variable for API URL (compatible with Expo/React Native)
+// Falls back to localhost for web development
+export const apiBaseUrl =
+    typeof process !== 'undefined'
+        ? (process.env.EXPO_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000")
+        : "http://127.0.0.1:8000";
 
 type RequestOptions = RequestInit & {
     headers?: Record<string, string>;
 };
+
+// Track if we're currently refreshing to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
+/**
+ * Refresh the access token using the refresh token.
+ * Returns the new access token or throws an error.
+ */
+async function refreshAccessToken(): Promise<string> {
+    // If already refreshing, return the existing promise
+    if (isRefreshing && refreshPromise) {
+        return refreshPromise;
+    }
+
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
+            const refreshToken = typeof window !== 'undefined'
+                ? localStorage.getItem('refresh_token')
+                : null;
+
+            if (!refreshToken) {
+                throw new Error('No refresh token available');
+            }
+
+            console.log('[API] Refreshing access token...');
+
+            const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to refresh token');
+            }
+
+            const data = await response.json();
+
+            // Save new tokens
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('refresh_token', data.refresh_token);
+            }
+
+            console.log('[API] Access token refreshed successfully');
+            return data.access_token;
+        } catch (error) {
+            console.error('[API] Token refresh failed:', error);
+            // Clear tokens and reload on refresh failure
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                window.location.reload();
+            }
+            throw error;
+        } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
 
 export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const url = `${apiBaseUrl}${endpoint}`;
@@ -40,11 +112,33 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
 
         if (response.status === 401) {
             console.warn(`401 Unauthorized from ${url}`);
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('access_token');
-                window.location.reload();
+
+            // Check if we have a refresh token and the request wasn't to the refresh endpoint
+            const hasRefreshToken = typeof window !== 'undefined'
+                && localStorage.getItem('refresh_token');
+            const isRefreshEndpoint = endpoint === '/auth/refresh';
+
+            if (hasRefreshToken && !isRefreshEndpoint) {
+                try {
+                    // Attempt to refresh the token
+                    await refreshAccessToken();
+
+                    // Retry the original request with the new token
+                    console.log(`[API] Retrying original request to ${url}`);
+                    return apiFetch<T>(endpoint, options);
+                } catch (refreshError) {
+                    // Refresh failed, error handling is done in refreshAccessToken
+                    throw new Error('Session expired');
+                }
+            } else {
+                // No refresh token or refresh endpoint failed - logout
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.reload();
+                }
+                throw new Error('Unauthorized');
             }
-            throw new Error('Unauthorized');
         }
 
         if (!response.ok) {
@@ -68,18 +162,24 @@ export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}
 
         return response.json();
     } catch (error) {
-        // Use warn instead of error for expected cases like 404s
+        // Use warn instead of error for expected cases like 404s and validation errors (400)
         const message = error instanceof Error ? error.message : 'Unknown error';
-        const isExpectedError = message.toLowerCase().includes('not found') ||
+        const isExpectedError =
+            message.toLowerCase().includes('not found') ||
             message.toLowerCase().includes('no ready recordings') ||
-            message.includes('404');
+            message.includes('404') ||
+            message.includes('HTTP Error 400') ||
+            message.includes('username already registered'); // Specific known error
 
         if (isExpectedError) {
             console.warn(`[API] ${url}: ${message}`);
         } else {
             console.error(`[API Error] Failed to fetch ${url}`, {
-                error,
-                message,
+                error: error,
+                errorType: error?.constructor?.name,
+                message: message,
+                errorString: String(error),
+                stack: error instanceof Error ? error.stack : undefined,
                 cause: error instanceof Error ? error.cause : undefined
             });
         }

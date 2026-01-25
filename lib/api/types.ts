@@ -1,6 +1,7 @@
 export interface Token {
   access_token: string;
   token_type: string;
+  refresh_token: string;
 }
 
 export interface UserOut {
@@ -153,6 +154,8 @@ export interface ChildAggregates {
   pos_distribution: Record<string, number>;
   global_mlu_words: number;
   articulation_wpm?: number;
+  overall_wpm?: number;
+  question_rate?: number;
   interaction?: InteractionAggregates | null;
   interaction_analysis?: InteractionAnalysis | null;
 }
@@ -259,10 +262,18 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     if (data.aggregates.articulation_wpm !== undefined) {
       speech = {
         total_speech_duration_seconds: data.aggregates.total_speech_duration_seconds,
-        overall_wpm_including_pauses: data.aggregates.articulation_wpm,
+        overall_wpm_including_pauses: data.aggregates.overall_wpm ?? data.aggregates.articulation_wpm,
         articulation_wpm_excluding_between_pauses: data.aggregates.articulation_wpm,
         words_per_second_articulation: (data.aggregates as any).articulation_wps || 0,
       } as SpeechMetrics;
+    }
+
+    // Create a synthesized counts object so frontend can read it
+    if (data.aggregates.question_rate !== undefined) {
+      (data.aggregates as any).counts = {
+        question_rate: data.aggregates.question_rate,
+        question_count: 0 // We don't have total count easily accessible here but rate is what's used
+      }
     }
   }
 
@@ -287,7 +298,8 @@ export function adaptAnalysis(data: RecordingAnalysisOut | ChildGlobalAnalysisOu
     interaction_aggregates,
     ttr,
     speech,
-  };
+    counts: (data as any).counts || (data as any).aggregates?.counts,
+  } as Analysis;
 }
 // ... (existing code)
 export interface ChildShareOut {

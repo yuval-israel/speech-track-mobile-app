@@ -35,6 +35,7 @@ export function LoginScreen({ onSuccess, onRegisterClick }: LoginScreenProps) {
 
       console.log("Login success", data)
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       toast.success("Logged in successfully");
       onSuccess();
     } catch (error) {
